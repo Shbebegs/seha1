@@ -27,7 +27,7 @@ header('Permissions-Policy: geolocation=(), microphone=(self), camera=()');
 // ======================== إعدادات قاعدة البيانات ========================
 $db_host = 'mysql.railway.internal';
 $db_user = 'root';
-$db_pass = 'CSCoMqXcUDBrzyRPMgjIxRVziMqcOFoK';
+$db_pass = 'xGnyGcxVAYSWwbRBSYpCDOwYkIvuTSbv';
 $db_name = 'railway';
 $db_port = 3306;
 
