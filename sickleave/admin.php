@@ -242,15 +242,15 @@ try { $pdo->exec("ALTER TABLE doctors MODIFY COLUMN title VARCHAR(150) DEFAULT '
 try { $pdo->exec("ALTER TABLE patients MODIFY COLUMN name VARCHAR(150) DEFAULT ''"); } catch(Exception $e) {}
 
 // أعمدة الأطباء الجديدة
-try { ensureColumn($pdo, 'doctors', 'name_ar', "VARCHAR(200) NULL AFTER name"); } catch(Exception $e) { ensureColumn($pdo, 'doctors', 'name_ar', "VARCHAR(200) NULL"); }
-try { ensureColumn($pdo, 'doctors', 'name_en', "VARCHAR(200) NULL AFTER name_ar"); } catch(Exception $e) { ensureColumn($pdo, 'doctors', 'name_en', "VARCHAR(200) NULL"); }
-try { ensureColumn($pdo, 'doctors', 'title_ar', "VARCHAR(200) NULL AFTER title"); } catch(Exception $e) { ensureColumn($pdo, 'doctors', 'title_ar', "VARCHAR(200) NULL"); }
-try { ensureColumn($pdo, 'doctors', 'title_en', "VARCHAR(200) NULL AFTER title_ar"); } catch(Exception $e) { ensureColumn($pdo, 'doctors', 'title_en', "VARCHAR(200) NULL"); }
-try { ensureColumn($pdo, 'doctors', 'hospital_id', "INT NULL AFTER title_en"); } catch(Exception $e) { ensureColumn($pdo, 'doctors', 'hospital_id', "INT NULL"); }
+ensureColumn($pdo, 'doctors', 'name_ar', "VARCHAR(200) NULL AFTER name");
+ensureColumn($pdo, 'doctors', 'name_en', "VARCHAR(200) NULL AFTER name_ar");
+ensureColumn($pdo, 'doctors', 'title_ar', "VARCHAR(200) NULL AFTER title");
+ensureColumn($pdo, 'doctors', 'title_en', "VARCHAR(200) NULL AFTER title_ar");
+ensureColumn($pdo, 'doctors', 'hospital_id', "INT NULL AFTER title_en");
 
 // أعمدة المرضى الجديدة
-try { ensureColumn($pdo, 'patients', 'name_ar', "VARCHAR(200) NULL AFTER name"); } catch(Exception $e) { ensureColumn($pdo, 'patients', 'name_ar', "VARCHAR(200) NULL"); }
-try { ensureColumn($pdo, 'patients', 'name_en', "VARCHAR(200) NULL AFTER name_ar"); } catch(Exception $e) { ensureColumn($pdo, 'patients', 'name_en', "VARCHAR(200) NULL"); }
+ensureColumn($pdo, 'patients', 'name_ar', "VARCHAR(200) NULL AFTER name");
+ensureColumn($pdo, 'patients', 'name_en', "VARCHAR(200) NULL AFTER name_ar");
 ensureColumn($pdo, 'patients', 'employer_ar', "VARCHAR(200) NULL AFTER name_en");
 ensureColumn($pdo, 'patients', 'employer_en', "VARCHAR(200) NULL AFTER employer_ar");
 ensureColumn($pdo, 'patients', 'nationality_ar', "VARCHAR(100) NULL AFTER employer_en");
@@ -562,15 +562,8 @@ function formatIssueTimeForDisplay(?string $time, ?string $period = null): strin
 }
 
 function formatHijriDateSpan(string $date): string {
-    // Hijri date format is YYYY-MM-DD, we want to display it RTL: DD-MM-YYYY (day first, year last from right)
     $safeDate = htmlspecialchars($date, ENT_QUOTES);
-    // Reverse the parts so it reads right-to-left: year on the right side
-    $parts = explode('-', $date);
-    if (count($parts) === 3) {
-        // Display as DD-MM-YYYY so when read RTL, year appears on the right
-        $safeDate = htmlspecialchars($parts[2] . '-' . $parts[1] . '-' . $parts[0], ENT_QUOTES);
-    }
-    return '<span dir="rtl" style="unicode-bidi:isolate;direction:rtl;display:inline-block;">' . $safeDate . '</span>';
+    return '<span dir="ltr" style="unicode-bidi:isolate;direction:ltr;display:inline-block;">' . $safeDate . '</span>';
 }
 
 function formatDaysText($days) {
@@ -973,7 +966,8 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
         $parts = explode('-', $d);
         if (count($parts) !== 3) return $d;
         $h = gregorianToHijri((int)$parts[0], (int)$parts[1], (int)$parts[2]);
-        return sprintf('%04d-%02d-%02d', $h['year'], $h['month'], $h['day']);
+        // Format as DD-MM-YYYY so year appears on the right in RTL display
+        return sprintf('%02d-%02d-%04d', $h['day'], $h['month'], $h['year']);
     };
 
     $startEn = $fmtEn($startG);
@@ -987,8 +981,10 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
     $patId = htmlspecialchars($lv['identity_number'] ?? '', ENT_QUOTES);
     $natAr = htmlspecialchars($lv['p_nationality_ar'] ?? '', ENT_QUOTES);
     $natEn = htmlspecialchars($lv['p_nationality_en'] ?? '', ENT_QUOTES);
-    $empAr = htmlspecialchars($lv['p_employer_ar'] ?? $lv['employer_ar'] ?? '', ENT_QUOTES);
-    $empEn = strtoupper(htmlspecialchars($lv['p_employer_en'] ?? $lv['employer_en'] ?? '', ENT_QUOTES));
+    $empArRaw = $lv['p_employer_ar'] ?? $lv['employer_ar'] ?? '';
+    $empEnRaw = $lv['p_employer_en'] ?? $lv['employer_en'] ?? '';
+    $empAr = htmlspecialchars($empArRaw !== '' ? $empArRaw : 'الى من يهمه الامر', ENT_QUOTES);
+    $empEn = htmlspecialchars($empEnRaw !== '' ? $empEnRaw : 'To Whom It May Concern', ENT_QUOTES);
     $docNameAr = htmlspecialchars($lv['d_name_ar'] ?? '', ENT_QUOTES);
     $docNameEn = strtoupper(htmlspecialchars($lv['d_name_en'] ?? $lv['doctor_name_en'] ?? '', ENT_QUOTES));
     $docTitleAr = htmlspecialchars($lv['d_title_ar'] ?? '', ENT_QUOTES);
@@ -1341,8 +1337,8 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
     $html .= '    <table class="info-table" cellpadding="0" cellspacing="0"><tbody>' . "\n";
     $html .= '      <tr><td class="en-title">Leave ID</td><td class="data-cell" colspan="2">' . $sc . '</td><td class="ar-title">رمز الإجازة</td></tr>' . "\n";
     $html .= '      <tr class="blue-row"><td class="en-title" style="color: white;">Leave Duration</td><td class="data-cell">' . $durationEn . '</td><td class="data-cell ar-text" dir="rtl">' . $durationAr . '</td><td class="ar-title" style="color: white;">مدة الإجازة</td></tr>' . "\n";
-    $html .= '      <tr><td class="en-title">Admission Date</td><td class="data-cell date-cell">' . $startEn . '</td><td class="data-cell date-cell">' . $startHj . '</td><td class="ar-title">تاريخ الدخول</td></tr>' . "\n";
-    $html .= '      <tr class="gray-row"><td class="en-title">Discharge Date</td><td class="data-cell date-cell">' . $endEn . '</td><td class="data-cell date-cell">' . $endHj . '</td><td class="ar-title">تاريخ الخروج</td></tr>' . "\n";
+    $html .= '      <tr><td class="en-title">Admission Date</td><td class="data-cell date-cell">' . $startEn . '</td><td class="data-cell date-cell" dir="ltr">' . $startHj . '</td><td class="ar-title">تاريخ الدخول</td></tr>' . "\n";
+    $html .= '      <tr class="gray-row"><td class="en-title">Discharge Date</td><td class="data-cell date-cell">' . $endEn . '</td><td class="data-cell date-cell" dir="ltr">' . $endHj . '</td><td class="ar-title">تاريخ الخروج</td></tr>' . "\n";
     $html .= '      <tr><td class="en-title">Issue Date</td><td class="data-cell" colspan="2">' . $issueEn . '</td><td class="ar-title">تاريخ الإصدار</td></tr>' . "\n";
     $html .= '      <tr class="gray-row"><td class="en-title">Patient Name</td><td class="data-cell en-spaced">' . $patNameEn . '</td><td class="data-cell ar-text">' . $patNameAr . '</td><td class="ar-title">الاسم</td></tr>' . "\n";
     $html .= '      <tr><td class="en-title">National ID / Iqama</td><td class="data-cell" colspan="2">' . $patId . '</td><td class="ar-title">رقم الهوية<span class="thin-slash">/</span>الإقامة</td></tr>' . "\n";
@@ -1570,9 +1566,11 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             // Cascade update to leaves
             $cascadeStmt = $pdo->prepare("UPDATE sick_leaves SET hospital_name_ar = ?, hospital_name_en = ? WHERE hospital_id = ?");
             $cascadeStmt->execute([$name_ar, $name_en, $id]);
-            if ($oldPrefix && $oldPrefix !== $prefix && in_array($oldPrefix, ['GSL','PSL'], true)) {
-                $codeCascadeStmt = $pdo->prepare("UPDATE sick_leaves SET service_code = CONCAT(?, SUBSTRING(service_code, 4)) WHERE hospital_id = ? AND service_code LIKE ?");
-                $codeCascadeStmt->execute([$prefix, $id, $oldPrefix . '%']);
+            if ($oldPrefix !== $prefix) {
+                // Update service codes for all leaves linked to this hospital
+                // Replace the first 3 characters (prefix) with the new prefix
+                $codeCascadeStmt = $pdo->prepare("UPDATE sick_leaves SET service_code = CONCAT(?, SUBSTRING(service_code, 4)) WHERE hospital_id = ?");
+                $codeCascadeStmt->execute([$prefix, $id]);
             }
             $hospitals = $pdo->query("SELECT id, name_ar, name_en, license_number, logo_path, logo_url, service_prefix, logo_scale, logo_offset_x, logo_offset_y, created_at, updated_at, CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 'has_logo' ELSE '' END AS has_logo_data FROM hospitals ORDER BY name_ar")->fetchAll();
             echo json_encode(['success'=>true,'message'=>'تم تعديل المستشفى بنجاح.','hospitals'=>$hospitals,'stats'=>getStats($pdo)]);
@@ -1613,10 +1611,10 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
         case 'get_doctors_by_hospital':
             $hid = intval($_POST['hospital_id'] ?? 0);
             if ($hid > 0) {
-                $stmt = $pdo->prepare("SELECT * FROM doctors WHERE hospital_id = ? ORDER BY name_ar");
+                $stmt = $pdo->prepare("SELECT d.*, h.name_ar AS hospital_name_ar FROM doctors d LEFT JOIN hospitals h ON d.hospital_id = h.id WHERE d.hospital_id = ? ORDER BY d.name_ar");
                 $stmt->execute([$hid]);
             } else {
-                $stmt = $pdo->query("SELECT * FROM doctors ORDER BY name_ar");
+                $stmt = $pdo->query("SELECT d.*, h.name_ar AS hospital_name_ar FROM doctors d LEFT JOIN hospitals h ON d.hospital_id = h.id ORDER BY d.name_ar");
             }
             echo json_encode(['success'=>true,'doctors'=>$stmt->fetchAll()]);
             break;
@@ -1655,8 +1653,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
                 if ($existing) {
                     $patient_id = $existing['id'];
                 } else {
-                    $stmt = $pdo->prepare("INSERT INTO patients (name_ar, identity_number, phone, folder_link) VALUES (?, ?, ?, ?)");
-                    $stmt->execute([$pName, $pIdentity, $pPhone, $pFolderLink]);
+                    $stmt = $pdo->prepare("INSERT INTO patients (name, name_ar, identity_number, phone, folder_link) VALUES (?, ?, ?, ?, ?)");
+                    $stmt->execute([$pName, $pName, $pIdentity, $pPhone, $pFolderLink]);
                     $patient_id = $pdo->lastInsertId();
                 }
             } else {
@@ -1673,8 +1671,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
                     echo json_encode(['success' => false, 'message' => 'يرجى إدخال اسم الطبيب ومسمّاه الوظيفي.']);
                     exit;
                 }
-                $stmt = $pdo->prepare("INSERT INTO doctors (name_ar, title_ar, note, hospital_id) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$dName, $dTitle, $dNote, $hospital_id]);
+                $stmt = $pdo->prepare("INSERT INTO doctors (name, name_ar, title, title_ar, note, hospital_id) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$dName, $dName, $dTitle, $dTitle, $dNote, $hospital_id]);
                 $doctor_id = $pdo->lastInsertId();
             } else {
                 $doctor_id = intval($doctor_select);
@@ -1753,7 +1751,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             }
 
             $data = fetchActiveOperationalData($pdo);
-            $data['doctors'] = $pdo->query("SELECT * FROM doctors ORDER BY name_ar")->fetchAll();
+            $data['doctors'] = $pdo->query("SELECT d.*, h.name_ar AS hospital_name_ar FROM doctors d LEFT JOIN hospitals h ON d.hospital_id = h.id ORDER BY d.name_ar")->fetchAll();
             $data['patients'] = $pdo->query("SELECT * FROM patients ORDER BY name_ar")->fetchAll();
             $data['stats'] = getStats($pdo);
             $data['success'] = true;
@@ -1790,8 +1788,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
                     echo json_encode(['success' => false, 'message' => 'يرجى إدخال اسم الطبيب ومسمّاه الوظيفي.']);
                     exit;
                 }
-                $stmt = $pdo->prepare("INSERT INTO doctors (name_ar, title_ar, note) VALUES (?, ?, ?)");
-                $stmt->execute([$dName, $dTitle, $dNote]);
+                $stmt = $pdo->prepare("INSERT INTO doctors (name, name_ar, title, title_ar, note) VALUES (?, ?, ?, ?, ?)");
+                $stmt->execute([$dName, $dName, $dTitle, $dTitle, $dNote]);
                 $doctor_id_edit = intval($pdo->lastInsertId());
             } else {
                 $doctor_id_edit = intval($doctor_id_edit_raw ?: 0);
@@ -1831,7 +1829,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             }
 
             $data = fetchActiveOperationalData($pdo);
-            $data['doctors'] = $pdo->query("SELECT * FROM doctors ORDER BY name_ar")->fetchAll();
+            $data['doctors'] = $pdo->query("SELECT d.*, h.name_ar AS hospital_name_ar FROM doctors d LEFT JOIN hospitals h ON d.hospital_id = h.id ORDER BY d.name_ar")->fetchAll();
             $data['patients'] = $pdo->query("SELECT * FROM patients ORDER BY name_ar")->fetchAll();
             $data['stats'] = getStats($pdo);
             $data['success'] = true;
@@ -1853,8 +1851,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
                     echo json_encode(['success' => false, 'message' => 'يرجى إدخال اسم الطبيب ومسمّاه الوظيفي.']);
                     exit;
                 }
-                $stmt = $pdo->prepare("INSERT INTO doctors (name_ar, title_ar, note) VALUES (?, ?, ?)");
-                $stmt->execute([$dName, $dTitle, $dNote]);
+                $stmt = $pdo->prepare("INSERT INTO doctors (name, name_ar, title, title_ar, note) VALUES (?, ?, ?, ?, ?)");
+                $stmt->execute([$dName, $dName, $dTitle, $dTitle, $dNote]);
                 $doctor_id = $pdo->lastInsertId();
             } else {
                 $doctor_id = intval($doctor_select);
@@ -1938,7 +1936,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             }
 
             $data = fetchActiveOperationalData($pdo);
-            $data['doctors'] = $pdo->query("SELECT * FROM doctors ORDER BY name_ar")->fetchAll();
+            $data['doctors'] = $pdo->query("SELECT d.*, h.name_ar AS hospital_name_ar FROM doctors d LEFT JOIN hospitals h ON d.hospital_id = h.id ORDER BY d.name_ar")->fetchAll();
             $data['patients'] = $pdo->query("SELECT * FROM patients ORDER BY name_ar")->fetchAll();
             $data['stats'] = getStats($pdo);
             $data['success'] = true;
@@ -2003,7 +2001,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $stmt->execute([$amount, $leave_id]);
             $pdo->prepare("DELETE FROM notifications WHERE leave_id = ? AND type = 'payment'")->execute([$leave_id]);
             $data = fetchActiveOperationalData($pdo);
-            $data['doctors'] = $pdo->query("SELECT * FROM doctors ORDER BY name_ar")->fetchAll();
+            $data['doctors'] = $pdo->query("SELECT d.*, h.name_ar AS hospital_name_ar FROM doctors d LEFT JOIN hospitals h ON d.hospital_id = h.id ORDER BY d.name_ar")->fetchAll();
             $data['patients'] = $pdo->query("SELECT * FROM patients ORDER BY name_ar")->fetchAll();
             $data['stats'] = getStats($pdo);
             $data['success'] = true;
@@ -2024,17 +2022,17 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             if (empty($title_ar)) $title_ar = $title;
             if (empty($name) && !empty($name_ar)) $name = $name_ar;
             if (empty($title) && !empty($title_ar)) $title = $title_ar;
-            if (empty($name_ar) || empty($title_ar)) {
+            if (empty($name) || empty($title)) {
                 echo json_encode(['success' => false, 'message' => 'يرجى إدخال اسم الطبيب ومسمّاه.']);
                 exit;
             }
-            $stmt = $pdo->prepare("INSERT INTO doctors (name_ar, name_en, title_ar, title_en, note, hospital_id) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$name_ar, $name_en, $title_ar, $title_en, $note, $doc_hospital_id]);
+            $stmt = $pdo->prepare("INSERT INTO doctors (name, title, note, name_ar, name_en, title_ar, title_en, hospital_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$name, $title, $note, $name_ar, $name_en, $title_ar, $title_en, $doc_hospital_id]);
             $doctorId = $pdo->lastInsertId();
             $doctor = $pdo->prepare("SELECT * FROM doctors WHERE id = ?");
             $doctor->execute([$doctorId]);
             $doctorData = $doctor->fetch();
-            $doctors = $pdo->query("SELECT * FROM doctors ORDER BY name_ar")->fetchAll();
+            $doctors = $pdo->query("SELECT d.*, h.name_ar AS hospital_name_ar FROM doctors d LEFT JOIN hospitals h ON d.hospital_id = h.id ORDER BY d.name_ar")->fetchAll();
             echo json_encode([
                 'success' => true,
                 'message' => 'تمت إضافة الطبيب بنجاح.',
@@ -2058,8 +2056,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
                 exit;
             }
 
-            $checkStmt = $pdo->prepare("SELECT id FROM doctors WHERE name_ar = ? AND title_ar = ? LIMIT 1");
-            $insertStmt = $pdo->prepare("INSERT INTO doctors (name_ar, name_en, title_ar, title_en, hospital_id) VALUES (?, ?, ?, ?, ?)");
+            $checkStmt = $pdo->prepare("SELECT id FROM doctors WHERE (name_ar = ? OR name = ?) AND (title_ar = ? OR title = ?) LIMIT 1");
+            $insertStmt = $pdo->prepare("INSERT INTO doctors (name, name_ar, name_en, title, title_ar, title_en, hospital_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
 
             $inserted = 0;
             $updated = 0;
@@ -2078,18 +2076,18 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
                     continue;
                 }
 
-                $checkStmt->execute([$nameAr, $titleAr]);
+                $checkStmt->execute([$nameAr, $nameAr, $titleAr, $titleAr]);
                 $existing = $checkStmt->fetch();
                 if ($existing) {
                     $duplicates++;
                     continue;
                 }
 
-                $insertStmt->execute([$nameAr, $nameEn, $titleAr, $titleEn, $batchHospitalId]);
+                $insertStmt->execute([$nameAr, $nameAr, $nameEn, $titleAr, $titleAr, $titleEn, $batchHospitalId]);
                 $inserted++;
             }
 
-            $doctors = $pdo->query("SELECT * FROM doctors ORDER BY name_ar")->fetchAll();
+            $doctors = $pdo->query("SELECT d.*, h.name_ar AS hospital_name_ar FROM doctors d LEFT JOIN hospitals h ON d.hospital_id = h.id ORDER BY d.name_ar")->fetchAll();
             $summaryMessage = "تمت معالجة الدفعة بنجاح: أضيف {$inserted}، مكرّر {$duplicates}.";
             if (!empty($errors)) {
                 $summaryMessage .= " أخطاء: " . implode(' | ', array_slice($errors, 0, 3));
@@ -2122,21 +2120,19 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $doc_hospital_id = intval($_POST['doctor_hospital_id'] ?? 0) ?: null;
             if (empty($name) && !empty($name_ar)) $name = $name_ar;
             if (empty($title) && !empty($title_ar)) $title = $title_ar;
-            if (empty($name_ar)) $name_ar = $name;
-            if (empty($title_ar)) $title_ar = $title;
-            if ($id <= 0 || empty($name_ar) || empty($title_ar)) {
+            if ($id <= 0 || empty($name) || empty($title)) {
                 echo json_encode(['success' => false, 'message' => 'بيانات غير صالحة.']);
                 exit;
             }
-            $stmt = $pdo->prepare("UPDATE doctors SET name_ar = ?, name_en = ?, title_ar = ?, title_en = ?, note = ?, hospital_id = ? WHERE id = ?");
-            $stmt->execute([$name_ar, $name_en, $title_ar, $title_en, $note, $doc_hospital_id, $id]);
+            $stmt = $pdo->prepare("UPDATE doctors SET name = ?, title = ?, note = ?, name_ar = ?, name_en = ?, title_ar = ?, title_en = ?, hospital_id = ? WHERE id = ?");
+            $stmt->execute([$name, $title, $note, $name_ar, $name_en, $title_ar, $title_en, $doc_hospital_id, $id]);
             // Cascade update to leaves
             $cascadeStmt = $pdo->prepare("UPDATE sick_leaves SET doctor_name_en = ?, doctor_title_en = ? WHERE doctor_id = ?");
             $cascadeStmt->execute([$name_en, $title_en, $id]);
             $doctor = $pdo->prepare("SELECT * FROM doctors WHERE id = ?");
             $doctor->execute([$id]);
             $doctorData = $doctor->fetch();
-            $doctors = $pdo->query("SELECT * FROM doctors ORDER BY name_ar")->fetchAll();
+            $doctors = $pdo->query("SELECT d.*, h.name_ar AS hospital_name_ar FROM doctors d LEFT JOIN hospitals h ON d.hospital_id = h.id ORDER BY d.name_ar")->fetchAll();
             echo json_encode([
                 'success' => true,
                 'message' => 'تم تعديل الطبيب بنجاح.',
@@ -2149,7 +2145,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
         case 'delete_doctor':
             $id = intval($_POST['doctor_id'] ?? 0);
             $pdo->prepare("DELETE FROM doctors WHERE id = ?")->execute([$id]);
-            $doctors = $pdo->query("SELECT * FROM doctors ORDER BY name_ar")->fetchAll();
+            $doctors = $pdo->query("SELECT d.*, h.name_ar AS hospital_name_ar FROM doctors d LEFT JOIN hospitals h ON d.hospital_id = h.id ORDER BY d.name_ar")->fetchAll();
             echo json_encode([
                 'success' => true,
                 'message' => 'تم حذف الطبيب بنجاح.',
@@ -2178,13 +2174,13 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $existingStmt->execute([$identity]);
             $existingPatientId = intval($existingStmt->fetchColumn() ?: 0);
             if ($existingPatientId > 0) {
-                $stmt = $pdo->prepare("UPDATE patients SET name_ar = ?, name_en = ?, phone = ?, folder_link = ?, employer_ar = ?, employer_en = ?, nationality_ar = ?, nationality_en = ? WHERE id = ?");
-                $stmt->execute([$name_ar, $name_en, $phone, $folder_link, $employer_ar, $employer_en, $nationality_ar, $nationality_en, $existingPatientId]);
+                $stmt = $pdo->prepare("UPDATE patients SET name = ?, phone = ?, folder_link = ?, name_ar = ?, name_en = ?, employer_ar = ?, employer_en = ?, nationality_ar = ?, nationality_en = ? WHERE id = ?");
+                $stmt->execute([$name, $phone, $folder_link, $name_ar, $name_en, $employer_ar, $employer_en, $nationality_ar, $nationality_en, $existingPatientId]);
                 $patientId = $existingPatientId;
                 $message = 'المريض موجود مسبقاً؛ تم تحديث بياناته واختياره.';
             } else {
-                $stmt = $pdo->prepare("INSERT INTO patients (name_ar, name_en, identity_number, phone, folder_link, employer_ar, employer_en, nationality_ar, nationality_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$name_ar, $name_en, $identity, $phone, $folder_link, $employer_ar, $employer_en, $nationality_ar, $nationality_en]);
+                $stmt = $pdo->prepare("INSERT INTO patients (name, identity_number, phone, folder_link, name_ar, name_en, employer_ar, employer_en, nationality_ar, nationality_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$name, $identity, $phone, $folder_link, $name_ar, $name_en, $employer_ar, $employer_en, $nationality_ar, $nationality_en]);
                 $patientId = $pdo->lastInsertId();
                 $message = 'تمت إضافة المريض بنجاح.';
             }
@@ -2214,8 +2210,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $nationality_ar = trim($_POST['patient_nationality_ar'] ?? '');
             $nationality_en = trim($_POST['patient_nationality_en'] ?? '');
             if (empty($name) && !empty($name_ar)) $name = $name_ar;
-            if (empty($name_ar)) $name_ar = $name;
-            if ($id <= 0 || empty($name_ar) || empty($identity)) {
+            if ($id <= 0 || empty($name) || empty($identity)) {
                 echo json_encode(['success' => false, 'message' => 'بيانات غير صالحة.']);
                 exit;
             }
@@ -2225,8 +2220,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
                 echo json_encode(['success' => false, 'message' => 'رقم الهوية مستخدم لمريض آخر.']);
                 exit;
             }
-            $stmt = $pdo->prepare("UPDATE patients SET name_ar = ?, name_en = ?, identity_number = ?, phone = ?, folder_link = ?, employer_ar = ?, employer_en = ?, nationality_ar = ?, nationality_en = ? WHERE id = ?");
-            $stmt->execute([$name_ar, $name_en, $identity, $phone, $folder_link, $employer_ar, $employer_en, $nationality_ar, $nationality_en, $id]);
+            $stmt = $pdo->prepare("UPDATE patients SET name = ?, identity_number = ?, phone = ?, folder_link = ?, name_ar = ?, name_en = ?, employer_ar = ?, employer_en = ?, nationality_ar = ?, nationality_en = ? WHERE id = ?");
+            $stmt->execute([$name, $identity, $phone, $folder_link, $name_ar, $name_en, $employer_ar, $employer_en, $nationality_ar, $nationality_en, $id]);
             // Cascade update to leaves
             $cascadeStmt = $pdo->prepare("UPDATE sick_leaves SET patient_name_en = ?, employer_ar = ?, employer_en = ? WHERE patient_id = ?");
             $cascadeStmt->execute([$name_en, $employer_ar, $employer_en, $id]);
@@ -2314,8 +2309,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             }
 
             $stmt = $pdo->prepare("
-                SELECT sl.*, p.name_ar AS patient_name, p.identity_number, p.folder_link AS patient_folder_link,
-                       d.name_ar AS doctor_name, d.title_ar AS doctor_title, d.note AS doctor_note,
+                SELECT sl.*, p.name AS patient_name, p.identity_number, p.folder_link AS patient_folder_link,
+                       d.name AS doctor_name, d.title AS doctor_title, d.note AS doctor_note,
                        (SELECT COUNT(*) FROM leave_queries lq WHERE lq.leave_id = sl.id) AS queries_count
                 FROM sick_leaves sl
                 LEFT JOIN patients p ON sl.patient_id = p.id
@@ -2419,7 +2414,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $summary['users_productivity'] = $usersProductivityStmt->fetchAll();
 
             $duplicatesStmt = $pdo->prepare("
-                SELECT p.name_ar AS patient_name, p.identity_number, sl.start_date, sl.end_date,
+                SELECT p.name AS patient_name, p.identity_number, sl.start_date, sl.end_date,
                        COUNT(*) AS repeated_count,
                        GROUP_CONCAT(DISTINCT COALESCE(u.display_name, 'غير محدد') SEPARATOR '، ') AS creators
                 FROM sick_leaves sl
@@ -2450,7 +2445,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
         case 'fetch_notifications':
             ensureDelayedUnpaidNotifications($pdo);
             $notifications = $pdo->query(" 
-                SELECT n.*, sl.payment_amount, sl.service_code, sl.patient_id, p.name_ar AS patient_name, p.phone AS patient_phone
+                SELECT n.*, sl.payment_amount, sl.service_code, sl.patient_id, p.name AS patient_name, p.phone AS patient_phone
                 FROM notifications n
                 LEFT JOIN sick_leaves sl ON n.leave_id = sl.id
                 LEFT JOIN patients p ON sl.patient_id = p.id
@@ -2469,7 +2464,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
         case 'fetch_leaves_by_patient':
             $patient_id = intval($_POST['patient_id'] ?? 0);
             $stmt = $pdo->prepare("
-                SELECT sl.*, d.name_ar AS doctor_name, d.title_ar AS doctor_title
+                SELECT sl.*, d.name AS doctor_name, d.title AS doctor_title
                 FROM sick_leaves sl
                 LEFT JOIN doctors d ON sl.doctor_id = d.id
                 WHERE sl.patient_id = ? AND sl.deleted_at IS NULL
@@ -2480,7 +2475,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             break;
 
         case 'fetch_doctors':
-            $doctors = $pdo->query("SELECT * FROM doctors ORDER BY name_ar")->fetchAll();
+            $doctors = $pdo->query("SELECT d.*, h.name_ar AS hospital_name_ar FROM doctors d LEFT JOIN hospitals h ON d.hospital_id = h.id ORDER BY d.name_ar")->fetchAll();
             echo json_encode(['success' => true, 'doctors' => $doctors, 'stats' => getStats($pdo)]);
             break;
 
