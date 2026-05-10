@@ -1060,12 +1060,12 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
         $pdfHtml .= '</style>';
         $pdfHtml .= '<style data-tag="default-style-sheet">';
         $pdfHtml .= 'html { font-family: Inter, sans-serif; font-size: 16px; }';
-        $pdfHtml .= 'body { font-weight: 400; color: #191818; background: #ffffff; }';
+        $pdfHtml .= 'body { font-weight: 400; color: #191818; background: #ffffff; margin: 0; padding: 0; }';
         $pdfHtml .= '</style>';
         $pdfHtml .= '<style>';
-        $pdfHtml .= '@page { size: A4; margin: 0; }';
-        $pdfHtml .= '.group1-container1 { width: 100%; display: flex; align-items: center; flex-direction: column; background-color: transparent; }';
-        $pdfHtml .= '.group1-thq-group1-elm { width: 842.25px; height: 1190.25px; display: flex; position: relative; align-items: flex-start; background-color: white; }';
+        $pdfHtml .= '@page { size: 842.25px 1190.25px; margin: 0; }';
+        $pdfHtml .= '.group1-container1 { width: 842.25px; height: 1190.25px; position: relative; background-color: transparent; margin: 0; padding: 0; }';
+        $pdfHtml .= '.group1-thq-group1-elm { width: 842.25px; height: 1190.25px; position: relative; background-color: white; margin: 0; padding: 0; }';
         $pdfHtml .= '.info-table { position: absolute; top: 242px; left: 36px; width: 770px; border-collapse: separate; border-spacing: 0; border: 1px solid #cccccc; border-radius: 8px; overflow: hidden; background-color: transparent; z-index: 10; }';
         $pdfHtml .= '.info-table td { border-bottom: 1px solid #cccccc; border-right: 1px solid #cccccc; height: 42px; text-align: center; vertical-align: middle; padding: 4px 8px; }';
         $pdfHtml .= '.info-table td:last-child { border-right: none; } .info-table tr:last-child td { border-bottom: none; }';
