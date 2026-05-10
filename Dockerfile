@@ -1,5 +1,5 @@
 FROM php:8.2-apache
-
+# force rebuild v2
 # Install the docker-php-extension-installer
 ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
 RUN chmod +x /usr/local/bin/install-php-extensions
