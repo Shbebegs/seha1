@@ -5,6 +5,7 @@
     "config": {
         "allow-plugins": {
             "mpdf/mpdf": true
-        }
+        },
+        "optimize-autoloader": true
     }
 }
