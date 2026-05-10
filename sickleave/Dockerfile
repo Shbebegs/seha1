@@ -7,7 +7,7 @@ RUN chmod +x /usr/local/bin/install-php-extensions
 # Install PHP extensions
 RUN install-php-extensions gd pdo_mysql mbstring zip
 
-# Fix MPM conflict AFTER extensions are installed (install-php-extensions may enable extra MPMs)
+# Fix MPM conflict AFTER extensions are installed
 RUN a2dismod mpm_worker 2>/dev/null; \
     a2dismod mpm_event 2>/dev/null; \
     a2enmod mpm_prefork; \
@@ -42,23 +42,25 @@ RUN chown -R www-data:www-data /var/www/html
 # Configure Apache
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# Make PORT available to Apache at runtime via envvars
-RUN echo 'export PORT=${PORT:-8080}' >> /etc/apache2/envvars
-
-# Configure Apache to listen on PORT (Railway sets this dynamically)
-RUN sed -i 's/Listen 80/Listen ${PORT}/' /etc/apache2/ports.conf \
-    && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:${PORT}>/' /etc/apache2/sites-available/000-default.conf
-
 # PHP configuration
 RUN printf "upload_max_filesize = 20M\npost_max_size = 25M\nmemory_limit = 256M\nmax_execution_time = 120\n" > /usr/local/etc/php/conf.d/custom.ini
 
-# Create startup script that ensures only one MPM is loaded
+# Create startup script that sets the actual PORT value at runtime
 RUN printf '#!/bin/bash\n\
-# Ensure only prefork MPM is active\n\
+set -e\n\
+# Railway provides PORT env var - default to 8080 if not set\n\
+LISTEN_PORT="${PORT:-8080}"\n\
+\n\
+# Fix MPM at runtime\n\
 a2dismod mpm_event 2>/dev/null || true\n\
 a2dismod mpm_worker 2>/dev/null || true\n\
 a2enmod mpm_prefork 2>/dev/null || true\n\
-# Start Apache\n\
+\n\
+# Write the actual port number into Apache config (not env var reference)\n\
+echo "Listen ${LISTEN_PORT}" > /etc/apache2/ports.conf\n\
+sed -i "s/<VirtualHost \\*:[0-9]*>/<VirtualHost *:${LISTEN_PORT}>/" /etc/apache2/sites-available/000-default.conf\n\
+\n\
+echo "Starting Apache on port ${LISTEN_PORT}"\n\
 exec apache2-foreground\n' > /usr/local/bin/start.sh \
     && chmod +x /usr/local/bin/start.sh
 
