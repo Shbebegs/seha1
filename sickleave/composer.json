@@ -1,11 +1,9 @@
 {
     "require": {
-        "mpdf/mpdf": "^8.2"
+        "chrome-php/chrome": "^1.0"
     },
     "config": {
-        "allow-plugins": {
-            "mpdf/mpdf": true
-        },
-        "optimize-autoloader": true
+        "optimize-autoloader": true,
+        "sort-packages": true
     }
 }
