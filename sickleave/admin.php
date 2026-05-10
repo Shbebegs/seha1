@@ -1088,14 +1088,14 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
                 usleep(1500000); // 1.5 seconds
                 
                 // Generate PDF with exact page dimensions (842.25 x 1190.25 px)
-                $pdfData = $page->pdf([
+                $pdf = $page->pdf([
                     'printBackground' => true,
                     'paperWidth' => 8.27,   // ~210mm in inches (A4-ish width)
                     'paperHeight' => 11.69, // ~297mm in inches
-                    'marginTop' => 0,
-                    'marginBottom' => 0,
-                    'marginLeft' => 0,
-                    'marginRight' => 0,
+                    'marginTop' => 0.0,
+                    'marginBottom' => 0.0,
+                    'marginLeft' => 0.0,
+                    'marginRight' => 0.0,
                     'preferCSSPageSize' => true,
                 ]);
                 
@@ -1103,10 +1103,14 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
                 @unlink($tmpHtml);
                 
                 // Send PDF to browser
+                header('Content-Description: File Transfer');
                 header('Content-Type: application/pdf');
-                header('Content-Disposition: attachment; filename="SickLeave_' . $sc . '.pdf"');
-                header('Cache-Control: no-cache, no-store, must-revalidate');
-                echo base64_decode($pdfData);
+                header('Content-Disposition: inline; filename="SickLeave_' . $sc . '.pdf"');
+                header('Content-Transfer-Encoding: binary');
+                header('Expires: 0');
+                header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+                header('Pragma: public');
+                echo base64_decode($pdf->getBase64());
                 exit;
             } catch (Exception $e) {
                 error_log('Chrome PDF Error: ' . $e->getMessage());
