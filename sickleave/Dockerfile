@@ -39,15 +39,19 @@ RUN mkdir -p /tmp/mpdf && chmod 777 /tmp/mpdf
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
 
-# Configure Apache to use PORT env variable at runtime (Railway sets PORT dynamically)
-RUN echo 'ServerName localhost\n' >> /etc/apache2/apache2.conf
-RUN sed -i 's/Listen 80/Listen ${PORT}/' /etc/apache2/ports.conf
-RUN sed -i 's/:80/:${PORT}/' /etc/apache2/sites-available/000-default.conf
+# Configure Apache: set ServerName and use PORT env variable
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# PHP configuration
-RUN echo "upload_max_filesize = 20M\npost_max_size = 25M\nmemory_limit = 256M\nmax_execution_time = 120" > /usr/local/etc/php/conf.d/custom.ini
+# Make PORT available to Apache at runtime via envvars
+RUN echo 'export PORT=${PORT:-8080}' >> /etc/apache2/envvars
+
+# Configure Apache to listen on PORT (Railway sets this dynamically)
+RUN sed -i 's/Listen 80/Listen ${PORT}/' /etc/apache2/ports.conf \
+    && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:${PORT}>/' /etc/apache2/sites-available/000-default.conf
+
+# PHP configuration for larger uploads and mPDF
+RUN printf "upload_max_filesize = 20M\npost_max_size = 25M\nmemory_limit = 256M\nmax_execution_time = 120\n" > /usr/local/etc/php/conf.d/custom.ini
 
 EXPOSE 8080
 
 CMD ["apache2-foreground"]
-
