@@ -85,3 +85,4 @@ RUN printf '#!/bin/bash\nset -e\nLISTEN_PORT="${PORT:-8080}"\na2dismod mpm_event
 EXPOSE 8080
 
 CMD ["/usr/local/bin/start.sh"]
+
