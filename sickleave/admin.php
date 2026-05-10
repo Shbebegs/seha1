@@ -13,7 +13,7 @@ date_default_timezone_set('Asia/Riyadh');
 // ======================== إعدادات قاعدة البيانات ========================
 $db_host = 'mysql.railway.internal';
 $db_user = 'root';
-$db_pass = 'xGnyGcxVAYSWwbRBSYpCDOwYkIvuTSbv';
+$db_pass = 'ExvKbuJnGIvDATyXWCHtpjOFluFAgeqQ';
 $db_name = 'railway';
 $db_port = 3306;
 
