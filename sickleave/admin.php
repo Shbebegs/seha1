@@ -202,25 +202,7 @@ function ensureIndex(PDO $pdo, string $table, string $indexName, string $columns
     }
 }
 
-ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_deleted_created', 'deleted_at, created_at');
-ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_paid', 'is_paid');
-ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_patient', 'patient_id');
-ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_doctor', 'doctor_id');
-ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_hospital', 'hospital_id');
-ensureColumn($pdo, 'sick_leaves', 'created_by_user_id', "INT NULL AFTER doctor_id");
-ensureColumn($pdo, 'sick_leaves', 'patient_name_en', "VARCHAR(200) NULL AFTER days_count");
-ensureColumn($pdo, 'sick_leaves', 'doctor_name_en', "VARCHAR(200) NULL AFTER patient_name_en");
-ensureColumn($pdo, 'sick_leaves', 'doctor_title_en', "VARCHAR(200) NULL AFTER doctor_name_en");
-ensureColumn($pdo, 'sick_leaves', 'hospital_name_ar', "VARCHAR(255) NULL AFTER doctor_title_en");
-ensureColumn($pdo, 'sick_leaves', 'hospital_name_en', "VARCHAR(255) NULL AFTER hospital_name_ar");
-ensureColumn($pdo, 'sick_leaves', 'logo_path', "VARCHAR(500) NULL AFTER hospital_name_en");
-ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_created_by_user', 'created_by_user_id');
-ensureIndex($pdo, 'notifications', 'idx_notifications_type_created', 'type, created_at');
-ensureIndex($pdo, 'notifications', 'idx_notifications_leave', 'leave_id');
-ensureIndex($pdo, 'leave_queries', 'idx_leave_queries_leave', 'leave_id');
-ensureIndex($pdo, 'leave_queries', 'idx_leave_queries_queried_at', 'queried_at');
-ensureIndex($pdo, 'patients', 'idx_patients_identity_number', 'identity_number');
-ensureIndex($pdo, 'patients', 'idx_patients_name', 'name_ar');
+// أولاً: إضافة الأعمدة الجديدة
 ensureColumn($pdo, 'patients', 'folder_link', "VARCHAR(500) NULL AFTER phone");
 ensureColumn($pdo, 'patients', 'name_ar', "VARCHAR(150) NULL AFTER id");
 ensureColumn($pdo, 'patients', 'name_en', "VARCHAR(150) NULL AFTER name_ar");
@@ -229,14 +211,33 @@ ensureColumn($pdo, 'doctors', 'name_en', "VARCHAR(150) NULL AFTER name_ar");
 ensureColumn($pdo, 'doctors', 'title_ar', "VARCHAR(150) NULL AFTER name_en");
 ensureColumn($pdo, 'doctors', 'title_en', "VARCHAR(150) NULL AFTER title_ar");
 ensureColumn($pdo, 'doctors', 'hospital_id', "INT NULL AFTER title_en");
+ensureColumn($pdo, 'sick_leaves', 'created_by_user_id', "INT NULL AFTER doctor_id");
 ensureColumn($pdo, 'sick_leaves', 'hospital_id', "INT NULL AFTER doctor_id");
 ensureColumn($pdo, 'sick_leaves', 'employer_ar', "VARCHAR(200) NULL AFTER hospital_id");
 ensureColumn($pdo, 'sick_leaves', 'employer_en', "VARCHAR(200) NULL AFTER employer_ar");
 ensureColumn($pdo, 'sick_leaves', 'issue_time', "VARCHAR(10) NULL AFTER issue_date");
 ensureColumn($pdo, 'sick_leaves', 'issue_period', "VARCHAR(10) NULL AFTER issue_time");
+ensureColumn($pdo, 'sick_leaves', 'patient_name_en', "VARCHAR(200) NULL AFTER days_count");
+ensureColumn($pdo, 'sick_leaves', 'doctor_name_en', "VARCHAR(200) NULL AFTER patient_name_en");
+ensureColumn($pdo, 'sick_leaves', 'doctor_title_en', "VARCHAR(200) NULL AFTER doctor_name_en");
+ensureColumn($pdo, 'sick_leaves', 'hospital_name_ar', "VARCHAR(255) NULL AFTER doctor_title_en");
+ensureColumn($pdo, 'sick_leaves', 'hospital_name_en', "VARCHAR(255) NULL AFTER hospital_name_ar");
+ensureColumn($pdo, 'sick_leaves', 'logo_path', "VARCHAR(500) NULL AFTER hospital_name_en");
+
+// ثانياً: إضافة الفهارس بعد التأكد من وجود الأعمدة
+ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_deleted_created', 'deleted_at, created_at');
+ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_paid', 'is_paid');
+ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_patient', 'patient_id');
+ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_doctor', 'doctor_id');
+ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_hospital', 'hospital_id');
+ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_created_by_user', 'created_by_user_id');
+ensureIndex($pdo, 'notifications', 'idx_notifications_type_created', 'type, created_at');
+ensureIndex($pdo, 'notifications', 'idx_notifications_leave', 'leave_id');
+ensureIndex($pdo, 'leave_queries', 'idx_leave_queries_leave', 'leave_id');
+ensureIndex($pdo, 'leave_queries', 'idx_leave_queries_queried_at', 'queried_at');
+ensureIndex($pdo, 'patients', 'idx_patients_identity_number', 'identity_number');
+ensureIndex($pdo, 'patients', 'idx_patients_name', 'name_ar');
 ensureIndex($pdo, 'doctors', 'idx_doctors_name', 'name_ar');
-ensureIndex($pdo, 'user_messages', 'idx_user_messages_pair_created', 'sender_id, receiver_id, created_at');
-ensureIndex($pdo, 'user_messages', 'idx_user_messages_receiver_read', 'receiver_id, is_read');
 ensureColumn($pdo, 'user_messages', 'message_type', "ENUM('text','image','file','voice') DEFAULT 'text' AFTER message_text");
 ensureColumn($pdo, 'user_messages', 'file_name', "VARCHAR(255) NULL AFTER message_type");
 ensureColumn($pdo, 'user_messages', 'file_path', "VARCHAR(500) NULL AFTER file_name");
@@ -246,6 +247,9 @@ ensureColumn($pdo, 'user_messages', 'deleted_at', "DATETIME NULL AFTER is_read")
 ensureColumn($pdo, 'user_messages', 'reply_to_id', "INT NULL AFTER deleted_at");
 ensureColumn($pdo, 'user_messages', 'chat_scope', "ENUM('private','global') DEFAULT 'private' AFTER reply_to_id");
 ensureColumn($pdo, 'user_messages', 'broadcast_group_id', "VARCHAR(50) NULL AFTER chat_scope");
+
+ensureIndex($pdo, 'user_messages', 'idx_user_messages_pair_created', 'sender_id, receiver_id, created_at');
+ensureIndex($pdo, 'user_messages', 'idx_user_messages_receiver_read', 'receiver_id, is_read');
 ensureIndex($pdo, 'user_messages', 'idx_user_messages_scope_created', 'chat_scope, created_at');
 ensureIndex($pdo, 'user_messages', 'idx_user_messages_broadcast', 'broadcast_group_id');
 ensureIndex($pdo, 'user_messages', 'idx_user_messages_deleted', 'deleted_at');
@@ -8497,4 +8501,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
-طلب تطوير لوحة تحكم لإصدار الإجازات والطباعة PDF - Manus
