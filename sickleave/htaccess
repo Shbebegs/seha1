@@ -1,0 +1,14 @@
+RewriteEngine On
+
+# Redirect root to admin.php
+RewriteRule ^$ /admin.php [L]
+
+# Security: deny access to sensitive files
+<FilesMatch "\.(json|lock|md|sh|txt)$">
+    Require all denied
+</FilesMatch>
+
+# Allow SVG files
+<FilesMatch "\.svg$">
+    Require all granted
+</FilesMatch>
