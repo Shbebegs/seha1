@@ -1,35 +1,52 @@
 FROM php:8.2-apache
 
-# يكسر الكاش في Railway (غيّر الرقم عند الحاجة)
-ARG CACHE_BUST=5
-RUN echo "cache bust: $CACHE_BUST"
+# Enable Apache mod_rewrite
+RUN a2enmod rewrite
 
-# Enable rewrite + ServerName
-RUN a2enmod rewrite \
- && echo "ServerName localhost" > /etc/apache2/conf-available/servername.conf \
- && a2enconf servername
+# Install system dependencies required by mPDF (GD, freetype, mbstring, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    libpng-dev \
+    libwebp-dev \
+    libzip-dev \
+    zlib1g-dev \
+    unzip \
+    git \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql mbstring zip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set working directory
 WORKDIR /var/www/html
-COPY . /var/www/html
+
+# Copy composer files first (for Docker cache optimization)
+COPY composer.json ./
+
+# Install PHP dependencies (mPDF)
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# Copy all project files
+COPY . .
+
+# Create temp directory for mPDF with proper permissions
+RUN mkdir -p /tmp/mpdf && chmod 777 /tmp/mpdf
+
+# Create uploads directory (even though we use DB for logos, just in case)
+RUN mkdir -p /var/www/html/uploads/hospital-logos && chmod 777 /var/www/html/uploads/hospital-logos
+
+# Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
 
-# اجعل DocumentRoot داخل sickleave
-RUN sed -i 's#DocumentRoot /var/www/html#DocumentRoot /var/www/html/sickleave#' /etc/apache2/sites-available/000-default.conf
+# Configure Apache to listen on PORT environment variable (Railway requirement)
+RUN sed -i 's/80/${PORT}/g' /etc/apache2/sites-available/000-default.conf /etc/apache2/ports.conf
 
-# ✅ الحل الثاني: صلاحيات المجلد داخل نفس الـ vhost (الأضمن)
-RUN printf '\n<Directory "/var/www/html/sickleave">\n    Options Indexes FollowSymLinks\n    AllowOverride All\n    Require all granted\n</Directory>\n' \
- >> /etc/apache2/sites-available/000-default.conf
+# PHP configuration for larger uploads and mPDF
+RUN echo "upload_max_filesize = 20M\npost_max_size = 25M\nmemory_limit = 256M\nmax_execution_time = 120" > /usr/local/etc/php/conf.d/custom.ini
 
-# DirectoryIndex
-RUN printf "\n<IfModule dir_module>\n    DirectoryIndex index.htm index.html index.php\n</IfModule>\n" \
-    >> /etc/apache2/apache2.conf
+EXPOSE ${PORT}
 
-# MySQL extensions
-RUN docker-php-ext-install mysqli pdo pdo_mysql
-
-# Entrypoint
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-
-EXPOSE 80
-CMD ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["apache2-foreground"]
