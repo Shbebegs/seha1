@@ -11,7 +11,7 @@
  * 5. تحسينات عامة في الأداء والأمان
  */
 
-// تحميل مكتبات Composer (mPDF)
+// تحميل مكتبات Composer (chrome-php)
 $autoloadPath = __DIR__ . '/vendor/autoload.php';
 if (file_exists($autoloadPath)) {
     require_once $autoloadPath;
@@ -33,7 +33,7 @@ header('Permissions-Policy: geolocation=(), microphone=(self), camera=()');
 // ======================== إعدادات قاعدة البيانات ========================
 $db_host = 'mysql.railway.internal';
 $db_user = 'root';
-$db_pass = 'ExvKbuJnGIvDATyXWCHtpjOFluFAgeqQ';
+$db_pass = 'xGnyGcxVAYSWwbRBSYpCDOwYkIvuTSbv';
 $db_name = 'railway';
 $db_port = 3306;
 
@@ -1039,26 +1039,13 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
     $reportBody .= '</span></div>';
     $reportBody .= '</div>';
 
-    // ==================== PDF MODE: mPDF ====================
+    // ==================== PDF MODE: Chrome Headless ====================
     if ($pdfMode === 'download') {
-        // Check if mPDF is available
-        $mpdfAvailable = class_exists('\Mpdf\Mpdf');
-        if ($mpdfAvailable) {
+        // Use Chrome headless (chrome-php) for pixel-perfect PDF generation
+        $chromeAvailable = class_exists('\HeadlessChromium\BrowserFactory');
+        if ($chromeAvailable) {
             try {
-                // Page size: 842.25 x 1190.25 px = ~222.8mm x 314.9mm (A3-ish portrait)
-                $mpdf = new \Mpdf\Mpdf([
-                    'mode' => 'utf-8',
-                    'format' => [222.8, 314.9],
-                    'margin_left' => 0, 'margin_right' => 0, 'margin_top' => 0, 'margin_bottom' => 0,
-                    'default_font' => 'times',
-                    'tempDir' => sys_get_temp_dir() . '/mpdf',
-                    'autoScriptToLang' => true,
-                    'autoLangToFont' => true,
-                ]);
-                $mpdf->SetDirectionality('ltr');
-                $mpdf->showImageErrors = false;
-                
-                // Convert relative SVG paths to absolute URLs
+                // Build the full preview HTML that Chrome will render
                 $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . rtrim(dirname($_SERVER['SCRIPT_NAME']), '/') . '/';
                 $pdfBody = str_replace(
                     ['src="sehalogoright.svg"', 'src="sehalogoleft.svg"', 'src="bottomright.svg"', 'src="header.svg"', 'src="qr.svg"'],
@@ -1066,22 +1053,67 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
                     $reportBody
                 );
                 
-                // Build full HTML for mPDF
-                $pdfHtml = '<!DOCTYPE html><html><head><style>';
+                $pdfHtml = '<!DOCTYPE html><html lang="ar"><head><meta charset="utf-8"/>';
+                $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap"/>';
+                $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap"/>';
+                $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap"/>';
+                $pdfHtml .= '<style>';
+                $pdfHtml .= 'html{line-height:1.15}body{margin:0;padding:0}*{box-sizing:border-box;border-width:0;border-style:solid;-webkit-font-smoothing:antialiased}';
                 $pdfHtml .= $reportCSS;
-                // Override for mPDF: make report-page fill the whole page
-                $pdfHtml .= '.report-page{width:222.8mm;height:314.9mm;position:relative;background-color:white;overflow:hidden}';
                 $pdfHtml .= '</style></head><body>' . $pdfBody . '</body></html>';
                 
-                $mpdf->WriteHTML($pdfHtml);
-                $mpdf->Output('SickLeave_' . $sc . '.pdf', \Mpdf\Output\Destination::DOWNLOAD);
+                // Save HTML to temp file
+                $tmpHtml = '/tmp/chrome-pdf/leave_' . $leave_id . '_' . time() . '.html';
+                file_put_contents($tmpHtml, $pdfHtml);
+                
+                // Find Chromium binary
+                $chromePath = getenv('CHROMIUM_PATH') ?: '/usr/bin/chromium';
+                if (!file_exists($chromePath)) {
+                    $chromePath = '/usr/bin/chromium-browser';
+                }
+                
+                $browserFactory = new \HeadlessChromium\BrowserFactory($chromePath);
+                $browser = $browserFactory->createBrowser([
+                    'headless' => true,
+                    'noSandbox' => true,
+                    'ignoreCertificateErrors' => true,
+                    'windowSize' => [842, 1190],
+                    'customFlags' => ['--disable-gpu', '--disable-dev-shm-usage', '--no-first-run'],
+                ]);
+                
+                $page = $browser->createPage();
+                $page->navigate('file://' . $tmpHtml)->waitForNavigation();
+                
+                // Wait for fonts to load
+                usleep(1500000); // 1.5 seconds
+                
+                // Generate PDF with exact page dimensions (842.25 x 1190.25 px)
+                $pdfData = $page->pdf([
+                    'printBackground' => true,
+                    'paperWidth' => 8.27,   // ~210mm in inches (A4-ish width)
+                    'paperHeight' => 11.69, // ~297mm in inches
+                    'marginTop' => 0,
+                    'marginBottom' => 0,
+                    'marginLeft' => 0,
+                    'marginRight' => 0,
+                    'preferCSSPageSize' => true,
+                ]);
+                
+                $browser->close();
+                @unlink($tmpHtml);
+                
+                // Send PDF to browser
+                header('Content-Type: application/pdf');
+                header('Content-Disposition: attachment; filename="SickLeave_' . $sc . '.pdf"');
+                header('Cache-Control: no-cache, no-store, must-revalidate');
+                echo base64_decode($pdfData);
                 exit;
             } catch (Exception $e) {
-                error_log('mPDF Error: ' . $e->getMessage());
-                // Fall through to preview mode with download button
+                error_log('Chrome PDF Error: ' . $e->getMessage());
+                // Fall through to preview mode
             }
         }
-        // If mPDF not available or failed, redirect to preview mode
+        // If Chrome not available or failed, redirect to preview mode
         $pdfMode = 'preview';
     }
 
@@ -1109,10 +1141,10 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
     $html .= '@media print{@page{size:842.25px 1190.25px;margin:0}body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;background:white!important}.controls{display:none!important}.group1-container1{padding:0!important;background-color:transparent!important}.group1-thq-group1-elm{box-shadow:none!important;margin:0!important;transform:scale(1);transform-origin:top left}a{color:rgba(20,0,255,1)!important;text-decoration:underline!important}}';
     $html .= '</style></head><body>';
     $html .= '<div class="controls">';
-    // If mPDF is available, use server-side PDF generation link
+    // If Chrome PDF is available, use server-side PDF generation link
     $pdfDownloadUrl = '?' . http_build_query(['action' => 'generate_pdf', 'leave_id' => $leave_id, 'pdf_mode' => 'download', 'csrf_token' => $_SESSION['csrf_token'] ?? '']);
-    $hasMpdf = class_exists('\\Mpdf\\Mpdf');
-    if ($hasMpdf) {
+    $hasChrome = class_exists('\\HeadlessChromium\\BrowserFactory');
+    if ($hasChrome) {
         $html .= '<a href="' . htmlspecialchars($pdfDownloadUrl) . '" class="download-btn" style="text-decoration:none">تحميل ملف PDF</a>';
     } else {
         $html .= '<button id="btnDownloadPDF" class="download-btn" onclick="downloadPDF()">تحميل ملف PDF</button>';
