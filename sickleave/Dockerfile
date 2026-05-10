@@ -5,7 +5,7 @@ ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/do
 RUN chmod +x /usr/local/bin/install-php-extensions
 
 # Install PHP extensions
-RUN install-php-extensions gd pdo_mysql mbstring zip
+RUN install-php-extensions gd pdo_mysql mbstring zip sockets
 
 # Fix MPM conflict AFTER extensions are installed
 RUN a2dismod mpm_worker 2>/dev/null; \
