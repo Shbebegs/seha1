@@ -1068,8 +1068,7 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
     $html .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap" />' . "\n";
     $html .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap" />' . "\n";
     $html .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap" />' . "\n";
-    $html .= '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>' . "\n";
-    $html .= '<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>' . "\n";
+
     $html .= '<style>' . "\n";
     // Layout Container
     $html .= '.group1-container1 { width: 100%; display: flex; overflow-x: hidden; min-height: 100vh; align-items: center; flex-direction: column; background-color: #f0f0f0; padding-top: 20px; padding-bottom: 20px; }' . "\n";
@@ -1191,21 +1190,41 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
     $html .= '    </div>' . "\n";
     $html .= '  </div>' . "\n";
     $html .= '</div>' . "\n";
-    // JavaScript for PDF download
+    // Load scripts at end of body for reliability
+    $html .= '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>' . "\n";
+    $html .= '<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>' . "\n";
     $html .= '<script>' . "\n";
+    $html .= 'function loadScript(url) {' . "\n";
+    $html .= '  return new Promise(function(resolve, reject) {' . "\n";
+    $html .= '    var s = document.createElement("script");' . "\n";
+    $html .= '    s.src = url;' . "\n";
+    $html .= '    s.onload = resolve;' . "\n";
+    $html .= '    s.onerror = reject;' . "\n";
+    $html .= '    document.head.appendChild(s);' . "\n";
+    $html .= '  });' . "\n";
+    $html .= '}' . "\n";
     $html .= 'async function downloadPDF() {' . "\n";
     $html .= '  var btn = document.getElementById("btnDownloadPDF");' . "\n";
     $html .= '  btn.textContent = "جاري التحميل...";' . "\n";
     $html .= '  btn.disabled = true;' . "\n";
     $html .= '  try {' . "\n";
+    $html .= '    if (typeof html2canvas === "undefined") {' . "\n";
+    $html .= '      await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");' . "\n";
+    $html .= '    }' . "\n";
+    $html .= '    if (!window.jspdf) {' . "\n";
+    $html .= '      await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js");' . "\n";
+    $html .= '    }' . "\n";
     $html .= '    var element = document.getElementById("report-content");' . "\n";
-    $html .= '    var canvas = await html2canvas(element, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", width: 842, height: 1190, windowWidth: 842, windowHeight: 1190 });' . "\n";
-    $html .= '    var { jsPDF } = window.jspdf;' . "\n";
+    $html .= '    var canvas = await html2canvas(element, { scale: 3, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", width: 842, height: 1190, windowWidth: 842, windowHeight: 1190 });' . "\n";
+    $html .= '    var jsPDF = window.jspdf.jsPDF;' . "\n";
     $html .= '    var pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [842, 1190], hotfixes: ["px_scaling"] });' . "\n";
-    $html .= '    var imgData = canvas.toDataURL("image/png", 1.0);' . "\n";
-    $html .= '    pdf.addImage(imgData, "PNG", 0, 0, 842, 1190);' . "\n";
+    $html .= '    var imgData = canvas.toDataURL("image/jpeg", 0.95);' . "\n";
+    $html .= '    pdf.addImage(imgData, "JPEG", 0, 0, 842, 1190);' . "\n";
     $html .= '    pdf.save("SickLeave_' . $scFile . '.pdf");' . "\n";
-    $html .= '  } catch(e) { console.error(e); alert("حدث خطأ: " + e.message); }' . "\n";
+    $html .= '  } catch(e) {' . "\n";
+    $html .= '    console.error(e);' . "\n";
+    $html .= '    alert("حدث خطأ: " + e.message + ". جرب زر الطباعة المباشرة بدلاً من ذلك.");' . "\n";
+    $html .= '  }' . "\n";
     $html .= '  btn.textContent = "تحميل ملف PDF";' . "\n";
     $html .= '  btn.disabled = false;' . "\n";
     $html .= '}' . "\n";
