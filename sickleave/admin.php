@@ -35,6 +35,15 @@ try {
 
 $pdo->exec("SET time_zone = '+03:00'");
 
+// ======================== دالة إضافة الأعمدة ========================
+function ensureColumn($pdo, $table, $column, $definition) {
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?");
+    $stmt->execute([$table, $column]);
+    if ((int)$stmt->fetchColumn() === 0) {
+        $pdo->exec("ALTER TABLE $table ADD COLUMN $column $definition");
+    }
+}
+
 // ======================== إنشاء الجداول ========================
 $pdo->exec("CREATE TABLE IF NOT EXISTS hospitals (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -94,6 +103,17 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS sick_leaves (
     CONSTRAINT fk_sick_leaves_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE RESTRICT,
     CONSTRAINT fk_sick_leaves_hospital FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+// إضافة الأعمدة الناقصة للجداول الموجودة
+ensureColumn($pdo, 'patients', 'name_ar', "VARCHAR(150) NULL");
+ensureColumn($pdo, 'patients', 'name_en', "VARCHAR(150) NULL");
+ensureColumn($pdo, 'patients', 'employer_ar', "VARCHAR(200) NULL");
+ensureColumn($pdo, 'patients', 'employer_en', "VARCHAR(200) NULL");
+ensureColumn($pdo, 'doctors', 'name_ar', "VARCHAR(150) NULL");
+ensureColumn($pdo, 'doctors', 'name_en', "VARCHAR(150) NULL");
+ensureColumn($pdo, 'doctors', 'title_ar', "VARCHAR(150) NULL");
+ensureColumn($pdo, 'doctors', 'title_en', "VARCHAR(150) NULL");
+ensureColumn($pdo, 'doctors', 'hospital_id', "INT NULL");
 
 // ======================== دوال مساعدة ========================
 function gregorianToHijri($gregorian_date) {
