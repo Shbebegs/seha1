@@ -95,6 +95,7 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS hospitals (
     name_en VARCHAR(200) NOT NULL DEFAULT '',
     license_number VARCHAR(50) NULL,
     logo_path VARCHAR(500) NULL,
+    logo_url VARCHAR(500) NULL,
     service_prefix ENUM('GSL','PSL') DEFAULT 'GSL',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -218,6 +219,7 @@ ensureColumn($pdo, 'sick_leaves', 'doctor_title_en', "VARCHAR(200) NULL AFTER do
 ensureColumn($pdo, 'sick_leaves', 'hospital_name_ar', "VARCHAR(255) NULL AFTER doctor_title_en");
 ensureColumn($pdo, 'sick_leaves', 'hospital_name_en', "VARCHAR(255) NULL AFTER hospital_name_ar");
 ensureColumn($pdo, 'sick_leaves', 'logo_path', "VARCHAR(500) NULL AFTER hospital_name_en");
+ensureColumn($pdo, 'hospitals', 'logo_url', "VARCHAR(500) NULL AFTER logo_path");
 ensureColumn($pdo, 'patients', 'folder_link', "VARCHAR(500) NULL AFTER phone");
 
 // ======================== أعمدة جديدة للمستشفيات والأطباء والمرضى ========================
@@ -320,7 +322,8 @@ function require_login() {
 
 function is_ajax_request() {
     return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'
-        || (isset($_POST['action']) && !empty($_POST['action']));
+        || (isset($_POST['action']) && !empty($_POST['action']))
+        || (isset($_GET['action']) && !empty($_GET['action']));
 }
 
 // ======================== دوال مساعدة ========================
@@ -928,12 +931,12 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
         exit;
     }
     
-    if (!verify_csrf($_POST['csrf_token'] ?? '')) {
+    if (!verify_csrf($_POST['csrf_token'] ?? $_GET['csrf_token'] ?? '')) {
         echo json_encode(['success' => false, 'message' => 'خطأ في التحقق من الأمان (CSRF). يرجى تحديث الصفحة.']);
         exit;
     }
     
-    $action = $_POST['action'];
+    $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
     // ======================== معالجة الإجراءات ========================
     switch ($action) {
@@ -958,8 +961,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             if (empty($name_ar)) { echo json_encode(['success'=>false,'message'=>'يرجى إدخال اسم المستشفى بالعربية.']); exit; }
             $logo_path = uploadHospitalLogo($_FILES['hospital_logo'] ?? []);
             if (!$logo_path && !empty($logo_url)) $logo_path = downloadLogoFromUrl($logo_url);
-            $stmt = $pdo->prepare("INSERT INTO hospitals (name_ar, name_en, license_number, logo_path, service_prefix) VALUES (?,?,?,?,?)");
-            $stmt->execute([$name_ar, $name_en, $license ?: null, $logo_path, $prefix]);
+            $stmt = $pdo->prepare("INSERT INTO hospitals (name_ar, name_en, license_number, logo_path, logo_url, service_prefix) VALUES (?,?,?,?,?,?)");
+            $stmt->execute([$name_ar, $name_en, $license ?: null, $logo_path, $logo_url ?: null, $prefix]);
             $hospitals = $pdo->query("SELECT * FROM hospitals ORDER BY name_ar")->fetchAll();
             echo json_encode(['success'=>true,'message'=>'تمت إضافة المستشفى بنجاح.','hospitals'=>$hospitals,'stats'=>getStats($pdo)]);
             break;
@@ -975,8 +978,11 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $logo_path = uploadHospitalLogo($_FILES['hospital_logo'] ?? []);
             if (!$logo_path && !empty($logo_url)) $logo_path = downloadLogoFromUrl($logo_url);
             if ($logo_path) {
-                $stmt = $pdo->prepare("UPDATE hospitals SET name_ar=?, name_en=?, license_number=?, logo_path=?, service_prefix=? WHERE id=?");
-                $stmt->execute([$name_ar, $name_en, $license ?: null, $logo_path, $prefix, $id]);
+                $stmt = $pdo->prepare("UPDATE hospitals SET name_ar=?, name_en=?, license_number=?, logo_path=?, logo_url=?, service_prefix=? WHERE id=?");
+                $stmt->execute([$name_ar, $name_en, $license ?: null, $logo_path, $logo_url ?: null, $prefix, $id]);
+            } elseif (!empty($logo_url)) {
+                $stmt = $pdo->prepare("UPDATE hospitals SET name_ar=?, name_en=?, license_number=?, logo_url=?, service_prefix=? WHERE id=?");
+                $stmt->execute([$name_ar, $name_en, $license ?: null, $logo_url, $prefix, $id]);
             } else {
                 $stmt = $pdo->prepare("UPDATE hospitals SET name_ar=?, name_en=?, license_number=?, service_prefix=? WHERE id=?");
                 $stmt->execute([$name_ar, $name_en, $license ?: null, $prefix, $id]);
@@ -1263,10 +1269,23 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $doctor_title_en = trim($_POST['dup_doctor_title_en'] ?? '');
             $hospital_name_ar = trim($_POST['dup_hospital_name_ar'] ?? '');
             $hospital_name_en = trim($_POST['dup_hospital_name_en'] ?? '');
+            $hospital_id = intval($_POST['dup_hospital_id'] ?? 0) ?: null;
+            $issue_time = trim($_POST['dup_issue_time'] ?? '');
+            $issue_period = in_array(strtoupper(trim($_POST['dup_issue_period'] ?? '')), ['AM','PM']) ? strtoupper(trim($_POST['dup_issue_period'])) : null;
+            $employer_ar = trim($_POST['dup_employer_ar'] ?? '');
+            $employer_en = trim($_POST['dup_employer_en'] ?? '');
             $existing_logo_path = trim($_POST['dup_existing_logo_path'] ?? '');
             $logo_path = uploadLeaveLogo($_FILES['dup_leave_logo'] ?? []);
             if (!$logo_path && $existing_logo_path !== '') {
                 $logo_path = $existing_logo_path;
+            }
+            // إذا لم يتم رفع شعار، نأخذه من المستشفى
+            if (!$logo_path && $hospital_id) {
+                $hStmt = $pdo->prepare("SELECT logo_path, name_ar, name_en FROM hospitals WHERE id = ?");
+                $hStmt->execute([$hospital_id]);
+                $hData = $hStmt->fetch();
+                if ($hData && !empty($hData['logo_path'])) $logo_path = $hData['logo_path'];
+                if (empty($hospital_name_ar) && $hData) { $hospital_name_ar = $hData['name_ar'] ?? ''; $hospital_name_en = $hData['name_en'] ?? ''; }
             }
             $created_by_user_id = intval($_SESSION['admin_user_id'] ?? 0) ?: null;
 
@@ -1276,13 +1295,13 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             }
 
             $stmt = $pdo->prepare("INSERT INTO sick_leaves 
-                (service_code, patient_id, doctor_id, created_by_user_id, issue_date, start_date, end_date, days_count, 
-                 patient_name_en, doctor_name_en, doctor_title_en, hospital_name_ar, hospital_name_en, logo_path,
+                (service_code, patient_id, doctor_id, hospital_id, created_by_user_id, issue_date, issue_time, issue_period, start_date, end_date, days_count, 
+                 patient_name_en, doctor_name_en, doctor_title_en, hospital_name_ar, hospital_name_en, logo_path, employer_ar, employer_en,
                  is_companion, companion_name, companion_relation, is_paid, payment_amount) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
-                $service_code, $patient_id, $doctor_id, $created_by_user_id, $issue_date, $start_date, $end_date, $days_count,
-                $patient_name_en, $doctor_name_en, $doctor_title_en, $hospital_name_ar, $hospital_name_en, $logo_path,
+                $service_code, $patient_id, $doctor_id, $hospital_id, $created_by_user_id, $issue_date, $issue_time, $issue_period, $start_date, $end_date, $days_count,
+                $patient_name_en, $doctor_name_en, $doctor_title_en, $hospital_name_ar, $hospital_name_en, $logo_path, $employer_ar, $employer_en,
                 $is_companion, $companion_name, $companion_relation, $is_paid, $payment_amount
             ]);
 
@@ -2309,17 +2328,16 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             break;
 
         case 'generate_pdf':
-            $leave_id = intval($_POST['leave_id'] ?? 0);
+            $leave_id = intval($_GET['leave_id'] ?? $_POST['leave_id'] ?? 0);
             $stmt = $pdo->prepare("
                 SELECT sl.*, 
-                       p.name AS patient_name, p.identity_number, p.name_ar AS p_name_ar, p.name_en AS p_name_en,
+                       p.name_ar AS p_name_ar, p.name_en AS p_name_en, p.identity_number,
                        p.employer_ar AS p_employer_ar, p.employer_en AS p_employer_en,
                        p.nationality_ar AS p_nationality_ar, p.nationality_en AS p_nationality_en,
-                       d.name AS doctor_name, d.title AS doctor_title, 
                        d.name_ar AS d_name_ar, d.name_en AS d_name_en,
                        d.title_ar AS d_title_ar, d.title_en AS d_title_en,
                        h.name_ar AS h_name_ar, h.name_en AS h_name_en, 
-                       h.license_number AS h_license, h.logo_path AS h_logo_path
+                       h.license_number AS h_license, h.logo_path AS h_logo_path, h.logo_url AS h_logo_url
                 FROM sick_leaves sl
                 LEFT JOIN patients p ON sl.patient_id = p.id
                 LEFT JOIN doctors d ON sl.doctor_id = d.id
@@ -2356,16 +2374,16 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $startHj = $toHijriStr($startG);
             $endHj = $toHijriStr($endG);
 
-            $patNameAr = htmlspecialchars($lv['p_name_ar'] ?? $lv['patient_name'] ?? '', ENT_QUOTES);
-            $patNameEn = htmlspecialchars($lv['p_name_en'] ?? $lv['patient_name_en'] ?? '', ENT_QUOTES);
+            $patNameAr = htmlspecialchars($lv['p_name_ar'] ?? '', ENT_QUOTES);
+            $patNameEn = strtoupper(htmlspecialchars($lv['p_name_en'] ?? $lv['patient_name_en'] ?? '', ENT_QUOTES));
             $patId = htmlspecialchars($lv['identity_number'] ?? '', ENT_QUOTES);
             $natAr = htmlspecialchars($lv['p_nationality_ar'] ?? '', ENT_QUOTES);
             $natEn = htmlspecialchars($lv['p_nationality_en'] ?? '', ENT_QUOTES);
             $empAr = htmlspecialchars($lv['p_employer_ar'] ?? $lv['employer_ar'] ?? '', ENT_QUOTES);
-            $empEn = htmlspecialchars($lv['p_employer_en'] ?? $lv['employer_en'] ?? '', ENT_QUOTES);
-            $docNameAr = htmlspecialchars($lv['d_name_ar'] ?? $lv['doctor_name'] ?? '', ENT_QUOTES);
-            $docNameEn = htmlspecialchars($lv['d_name_en'] ?? $lv['doctor_name_en'] ?? '', ENT_QUOTES);
-            $docTitleAr = htmlspecialchars($lv['d_title_ar'] ?? $lv['doctor_title'] ?? '', ENT_QUOTES);
+            $empEn = strtoupper(htmlspecialchars($lv['p_employer_en'] ?? $lv['employer_en'] ?? '', ENT_QUOTES));
+            $docNameAr = htmlspecialchars($lv['d_name_ar'] ?? '', ENT_QUOTES);
+            $docNameEn = strtoupper(htmlspecialchars($lv['d_name_en'] ?? $lv['doctor_name_en'] ?? '', ENT_QUOTES));
+            $docTitleAr = htmlspecialchars($lv['d_title_ar'] ?? '', ENT_QUOTES);
             $docTitleEn = htmlspecialchars($lv['d_title_en'] ?? $lv['doctor_title_en'] ?? '', ENT_QUOTES);
 
             $hospNameAr = htmlspecialchars($lv['h_name_ar'] ?? $lv['hospital_name_ar'] ?? '', ENT_QUOTES);
@@ -2373,15 +2391,18 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $hospLicense = $lv['h_license'] ?? '';
             $hospLogoPath = $lv['h_logo_path'] ?? $lv['logo_path'] ?? '';
 
-            // Hospital logo
-            $hospLogoHtml = '';
+            // Hospital logo - check local file first, then URL, then default
+            $hospLogoUrl = $lv['h_logo_url'] ?? '';
+            $defaultLogo = 'https://upload.wikimedia.org/wikipedia/ar/thumb/f/fe/Saudi_Ministry_of_Health_Logo.svg/3840px-Saudi_Ministry_of_Health_Logo.svg.png';
+            $logoSrc = $defaultLogo;
             if ($hospLogoPath && file_exists(__DIR__ . '/' . $hospLogoPath)) {
-                $hospLogoHtml = '<img src="' . htmlspecialchars($hospLogoPath) . '" alt="Hospital Logo" style="width: 120px; height: 120px; object-fit: contain;" />';
-            } else if ($hospLogoPath && (strpos($hospLogoPath, 'http') === 0)) {
-                $hospLogoHtml = '<img src="' . htmlspecialchars($hospLogoPath) . '" alt="Hospital Logo" style="width: 120px; height: 120px; object-fit: contain;" />';
-            } else {
-                $hospLogoHtml = '<img src="https://upload.wikimedia.org/wikipedia/ar/thumb/f/fe/Saudi_Ministry_of_Health_Logo.svg/3840px-Saudi_Ministry_of_Health_Logo.svg.png" alt="Hospital Logo" style="width: 120px; height: 120px; object-fit: contain;" />';
+                $logoSrc = $hospLogoPath;
+            } elseif ($hospLogoPath && strpos($hospLogoPath, 'http') === 0) {
+                $logoSrc = $hospLogoPath;
+            } elseif ($hospLogoUrl && strpos($hospLogoUrl, 'http') === 0) {
+                $logoSrc = $hospLogoUrl;
             }
+            $hospLogoHtml = '<img src="' . htmlspecialchars($logoSrc) . '" alt="Hospital Logo" style="width: 120px; height: 120px; object-fit: contain;" />';
 
             // License section
             $licenseHtml = '';
