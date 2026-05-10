@@ -1039,12 +1039,94 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
     $reportBody .= '</span></div>';
     $reportBody .= '</div>';
 
-    // Always use preview mode - PDF is generated client-side via html2canvas + jsPDF
-    $pdfMode = 'preview';
+    $scFile = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sc);
+
+    // ==================== DOWNLOAD MODE (WeasyPrint) ====================
+    if ($pdfMode === 'download') {
+        // Build full HTML with embedded SVGs as absolute URLs
+        $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']) . '/';
+        
+        $pdfHtml = '<!DOCTYPE html><html lang="ar"><head><meta charset="utf-8"/>';
+        $pdfHtml .= '<style>';
+        $pdfHtml .= '@page { size: 842.25px 1190.25px; margin: 0; }';
+        $pdfHtml .= 'html { line-height: 1.15; } body { margin: 0; }';
+        $pdfHtml .= '* { box-sizing: border-box; border-width: 0; border-style: solid; -webkit-font-smoothing: antialiased; }';
+        $pdfHtml .= 'p, li, ul, pre, div, h1, h2, h3, h4, h5, h6, figure, blockquote, figcaption { margin: 0; padding: 0; }';
+        $pdfHtml .= 'a { color: inherit; text-decoration: inherit; }';
+        $pdfHtml .= 'html { font-family: "Noto Sans", "Noto Sans Arabic", Inter, sans-serif; font-size: 16px; }';
+        $pdfHtml .= 'body { font-weight: 400; color: #191818; background: white; }';
+        $pdfHtml .= '.report-page { width: 842.25px; height: 1190.25px; position: relative; background-color: white; overflow: hidden; }';
+        $pdfHtml .= '.info-table { position: absolute; top: 242px; left: 36px; width: 770px; border-collapse: separate; border-spacing: 0; border: 1px solid #cccccc; border-radius: 8px; overflow: hidden; background-color: transparent; z-index: 10; }';
+        $pdfHtml .= '.info-table td { border-bottom: 1px solid #cccccc; border-right: 1px solid #cccccc; height: 42px; text-align: center; vertical-align: middle; padding: 4px 8px; }';
+        $pdfHtml .= '.info-table td:last-child { border-right: none; } .info-table tr:last-child td { border-bottom: none; }';
+        $pdfHtml .= '.info-table .en-title { width: 161px; color: rgba(54, 111, 181, 1); font-size: 13.5px; font-weight: 700; text-align: center; font-family: "Times New Roman", serif; }';
+        $pdfHtml .= '.info-table .data-cell { width: 240px; color: rgba(44, 62, 119, 1); font-size: 13.5px; font-family: "Times New Roman", serif; font-weight: 400; text-align: center; }';
+        $pdfHtml .= '.info-table .date-cell { font-size: 13.9px; } .info-table .data-cell.ar-text { font-family: "Noto Sans Arabic", sans-serif; }';
+        $pdfHtml .= '.info-table .ar-title { width: 140px; color: rgba(54, 111, 181, 1); font-size: 13.5px; font-weight: 700; text-align: center; font-family: "Noto Sans Arabic", sans-serif; white-space: nowrap; }';
+        $pdfHtml .= '.info-table tr.blue-row td { background-color: #2c3e77; color: #ffffff; border-bottom: 1px solid #cccccc; border-right: 1px solid #cccccc; }';
+        $pdfHtml .= '.info-table tr.blue-row td:last-child { border-right: none; }';
+        $pdfHtml .= '.info-table .blue-row .data-cell.ar-text { color: rgba(255, 255, 255, 1); font-size: 13.5px; font-family: "Times New Roman", serif; font-weight: 400; }';
+        $pdfHtml .= '.info-table .blue-row .data-cell { color: rgba(255, 255, 255, 1); }';
+        $pdfHtml .= '.info-table tr.gray-row td { background-color: #f7f7f7; }';
+        $pdfHtml .= '.en-spaced { letter-spacing: 0.3px; }';
+        $pdfHtml .= ':root { --footer-offset: 40px; }';
+        $pdfHtml .= '.group1-thq-staticinfo-elm { top: 125px; left: 36.65px; width: 768.35px; height: 811.91px; display: flex; position: absolute; align-items: flex-start; }';
+        $pdfHtml .= '.top-right-placeholder { position: absolute; top: 36px; left: 592px; width: 214px; height: 107px; display: flex; align-items: center; justify-content: center; }';
+        $pdfHtml .= '.top-left-placeholder { position: absolute; top: 36px; left: 36px; width: 149.96px; height: 65.98px; display: flex; align-items: center; justify-content: center; }';
+        $pdfHtml .= '.bottom-right-placeholder { position: absolute; top: 1005px; left: 657.17px; width: 149.96px; height: 71.23px; display: flex; align-items: center; justify-content: center; }';
+        $pdfHtml .= '.header-placeholder { top: -55px; left: 320px; width: 160px; height: 50px; position: absolute; display: flex; align-items: center; justify-content: center; }';
+        $pdfHtml .= '.group1-thq-text-elm41 { top: 40px; left: 289px; color: rgba(48, 109, 181, 1); width: 215px; position: absolute; font-size: 22.5px; font-weight: 700; text-align: center; line-height: 30px; }';
+        $pdfHtml .= '.group1-thq-text-elm44 { top: -10px; left: 310px; color: rgba(0, 0, 0, 1); position: absolute; font-size: 17.3px; font-weight: 400; text-align: left; font-family: "Times New Roman", serif; }';
+        $pdfHtml .= '.group1-thq-hospitallogoandthename-elm { top: 760px; left: 438.94px; width: 403px; height: 202.78px; display: flex; position: absolute; align-items: flex-start; }';
+        $pdfHtml .= '.placeholder-logo-hospital { top: -12px; left: 133px; width: 136px; height: 136px; position: absolute; display: flex; align-items: center; justify-content: center; }';
+        $pdfHtml .= '.group1-thq-text-elm18 { top: 120px; color: rgba(0, 0, 0, 1); width: 403px; height: auto; position: absolute; font-size: 12.8px; text-align: center; line-height: 22px; }';
+        $pdfHtml .= '.group1-thq-thedateofissueandalsotimeofissue-elm { top: calc(989.85px + var(--footer-offset)); left: 37.37px; width: 250px; height: 56px; display: flex; position: absolute; align-items: flex-start; }';
+        $pdfHtml .= '.group1-thq-text-elm22 { color: rgba(0, 0, 0, 1); font-size: 12.5px; font-weight: 700; text-align: left; line-height: 28px; font-family: "Times New Roman", serif; position: absolute; white-space: nowrap; }';
+        $pdfHtml .= '.group1-thq-text-elm36 { top: calc(724.55px + var(--footer-offset)); left: 29.23px; color: rgba(0, 0, 0, 1); position: absolute; font-size: 12px; font-weight: 700; text-align: center; font-family: "Noto Sans Arabic", sans-serif; line-height: 23px; }';
+        $pdfHtml .= '.group1-thq-text-elm39 { top: calc(775.17px + var(--footer-offset)); left: 55px; color: rgba(0, 0, 0, 1); position: absolute; font-size: 12px; font-weight: 700; text-align: left; font-family: "Times New Roman", serif; }';
+        $pdfHtml .= '.group1-thq-text-elm40 { top: calc(798.91px + var(--footer-offset)); left: 108.35px; color: rgba(20, 0, 255, 1); position: absolute; font-size: 11px; font-weight: 700; text-align: left; text-decoration: underline; font-family: "Times New Roman", serif; }';
+        $pdfHtml .= '.placeholder-136 { position: absolute; top: 620px; left: 122px; width: 136px; height: 136px; display: flex; align-items: center; justify-content: center; }';
+        $pdfHtml .= '.vertical-divider { position: absolute; top: 735px; left: 436px; width: 1px; height: 7cm; background-color: #dddddd; }';
+        $pdfHtml .= '.thin-slash { font-weight: 300; font-family: "Noto Sans", sans-serif; margin: 0 3px; display: inline-block; }';
+        $pdfHtml .= '</style></head><body>';
+        
+        // Replace relative SVG paths with absolute URLs
+        $pdfBody = str_replace(
+            ['src="sehalogoright.svg"', 'src="sehalogoleft.svg"', 'src="bottomright.svg"', 'src="header.svg"', 'src="qr.svg"'],
+            ['src="' . $baseUrl . 'sehalogoright.svg"', 'src="' . $baseUrl . 'sehalogoleft.svg"', 'src="' . $baseUrl . 'bottomright.svg"', 'src="' . $baseUrl . 'header.svg"', 'src="' . $baseUrl . 'qr.svg"'],
+            $reportBody
+        );
+        $pdfHtml .= $pdfBody;
+        $pdfHtml .= '</body></html>';
+        
+        // Save HTML to temp file
+        $tmpHtml = '/tmp/weasyprint/report_' . uniqid() . '.html';
+        $tmpPdf = '/tmp/weasyprint/report_' . uniqid() . '.pdf';
+        file_put_contents($tmpHtml, $pdfHtml);
+        
+        // Run WeasyPrint
+        $cmd = 'weasyprint "' . $tmpHtml . '" "' . $tmpPdf . '" 2>&1';
+        $output = shell_exec($cmd);
+        
+        if (file_exists($tmpPdf) && filesize($tmpPdf) > 0) {
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="SickLeave_' . $scFile . '.pdf"');
+            header('Content-Length: ' . filesize($tmpPdf));
+            header('Cache-Control: no-cache, no-store, must-revalidate');
+            readfile($tmpPdf);
+            @unlink($tmpHtml);
+            @unlink($tmpPdf);
+            exit;
+        } else {
+            // WeasyPrint failed - fallback to preview with error
+            @unlink($tmpHtml);
+            error_log('WeasyPrint Error: ' . $output);
+            // Fall through to preview mode
+        }
+    }
 
     // ==================== PREVIEW MODE ====================
     header('Content-Type: text/html; charset=utf-8');
-    $scFile = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sc);
     
     $html = '<!DOCTYPE html>' . "\n";
     $html .= '<html lang="ar">' . "\n";
@@ -1190,43 +1272,22 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
     $html .= '    </div>' . "\n";
     $html .= '  </div>' . "\n";
     $html .= '</div>' . "\n";
-    // Load scripts at end of body for reliability
-    $html .= '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>' . "\n";
-    $html .= '<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>' . "\n";
+    // JavaScript - download PDF via server-side WeasyPrint
     $html .= '<script>' . "\n";
-    $html .= 'function loadScript(url) {' . "\n";
-    $html .= '  return new Promise(function(resolve, reject) {' . "\n";
-    $html .= '    var s = document.createElement("script");' . "\n";
-    $html .= '    s.src = url;' . "\n";
-    $html .= '    s.onload = resolve;' . "\n";
-    $html .= '    s.onerror = reject;' . "\n";
-    $html .= '    document.head.appendChild(s);' . "\n";
-    $html .= '  });' . "\n";
-    $html .= '}' . "\n";
-    $html .= 'async function downloadPDF() {' . "\n";
+    $html .= 'function downloadPDF() {' . "\n";
     $html .= '  var btn = document.getElementById("btnDownloadPDF");' . "\n";
     $html .= '  btn.textContent = "جاري التحميل...";' . "\n";
     $html .= '  btn.disabled = true;' . "\n";
-    $html .= '  try {' . "\n";
-    $html .= '    if (typeof html2canvas === "undefined") {' . "\n";
-    $html .= '      await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");' . "\n";
-    $html .= '    }' . "\n";
-    $html .= '    if (!window.jspdf) {' . "\n";
-    $html .= '      await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js");' . "\n";
-    $html .= '    }' . "\n";
-    $html .= '    var element = document.getElementById("report-content");' . "\n";
-    $html .= '    var canvas = await html2canvas(element, { scale: 3, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", width: 842, height: 1190, windowWidth: 842, windowHeight: 1190 });' . "\n";
-    $html .= '    var jsPDF = window.jspdf.jsPDF;' . "\n";
-    $html .= '    var pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [842, 1190], hotfixes: ["px_scaling"] });' . "\n";
-    $html .= '    var imgData = canvas.toDataURL("image/jpeg", 0.95);' . "\n";
-    $html .= '    pdf.addImage(imgData, "JPEG", 0, 0, 842, 1190);' . "\n";
-    $html .= '    pdf.save("SickLeave_' . $scFile . '.pdf");' . "\n";
-    $html .= '  } catch(e) {' . "\n";
-    $html .= '    console.error(e);' . "\n";
-    $html .= '    alert("حدث خطأ: " + e.message + ". جرب زر الطباعة المباشرة بدلاً من ذلك.");' . "\n";
-    $html .= '  }' . "\n";
-    $html .= '  btn.textContent = "تحميل ملف PDF";' . "\n";
-    $html .= '  btn.disabled = false;' . "\n";
+    $html .= '  var url = window.location.href;' . "\n";
+    $html .= '  if (url.indexOf("pdf_mode=") > -1) { url = url.replace(/pdf_mode=[^&]*/, "pdf_mode=download"); }' . "\n";
+    $html .= '  else { url += (url.indexOf("?") > -1 ? "&" : "?") + "pdf_mode=download"; }' . "\n";
+    $html .= '  var a = document.createElement("a");' . "\n";
+    $html .= '  a.href = url;' . "\n";
+    $html .= '  a.download = "SickLeave_' . $scFile . '.pdf";' . "\n";
+    $html .= '  document.body.appendChild(a);' . "\n";
+    $html .= '  a.click();' . "\n";
+    $html .= '  document.body.removeChild(a);' . "\n";
+    $html .= '  setTimeout(function() { btn.textContent = "تحميل ملف PDF"; btn.disabled = false; }, 3000);' . "\n";
     $html .= '}' . "\n";
     $html .= '</script>' . "\n";
     $html .= '</body>' . "\n";
