@@ -11,7 +11,7 @@
  * 5. تحسينات عامة في الأداء والأمان
  */
 
-// تحميل مكتبات Composer (chrome-php)
+// تحميل مكتبات Composer (إن وجدت)
 $autoloadPath = __DIR__ . '/vendor/autoload.php';
 if (file_exists($autoloadPath)) {
     require_once $autoloadPath;
@@ -1039,88 +1039,8 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
     $reportBody .= '</span></div>';
     $reportBody .= '</div>';
 
-    // ==================== PDF MODE: Chrome Headless ====================
-    if ($pdfMode === 'download') {
-        // Use Chrome headless (chrome-php) for pixel-perfect PDF generation
-        $chromeAvailable = class_exists('\HeadlessChromium\BrowserFactory');
-        if ($chromeAvailable) {
-            try {
-                // Build the full preview HTML that Chrome will render
-                $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . rtrim(dirname($_SERVER['SCRIPT_NAME']), '/') . '/';
-                $pdfBody = str_replace(
-                    ['src="sehalogoright.svg"', 'src="sehalogoleft.svg"', 'src="bottomright.svg"', 'src="header.svg"', 'src="qr.svg"'],
-                    ['src="' . $baseUrl . 'sehalogoright.svg"', 'src="' . $baseUrl . 'sehalogoleft.svg"', 'src="' . $baseUrl . 'bottomright.svg"', 'src="' . $baseUrl . 'header.svg"', 'src="' . $baseUrl . 'qr.svg"'],
-                    $reportBody
-                );
-                
-                $pdfHtml = '<!DOCTYPE html><html lang="ar"><head><meta charset="utf-8"/>';
-                $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap"/>';
-                $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap"/>';
-                $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap"/>';
-                $pdfHtml .= '<style>';
-                $pdfHtml .= 'html{line-height:1.15}body{margin:0;padding:0}*{box-sizing:border-box;border-width:0;border-style:solid;-webkit-font-smoothing:antialiased}';
-                $pdfHtml .= $reportCSS;
-                $pdfHtml .= '</style></head><body>' . $pdfBody . '</body></html>';
-                
-                // Save HTML to temp file
-                $tmpHtml = '/tmp/chrome-pdf/leave_' . $leave_id . '_' . time() . '.html';
-                file_put_contents($tmpHtml, $pdfHtml);
-                
-                // Find Chromium binary
-                $chromePath = getenv('CHROMIUM_PATH') ?: '/usr/bin/chromium';
-                if (!file_exists($chromePath)) {
-                    $chromePath = '/usr/bin/chromium-browser';
-                }
-                
-                $browserFactory = new \HeadlessChromium\BrowserFactory($chromePath);
-                $browser = $browserFactory->createBrowser([
-                    'headless' => true,
-                    'noSandbox' => true,
-                    'ignoreCertificateErrors' => true,
-                    'windowSize' => [842, 1190],
-                    'sendSyncDefaultTimeout' => 60000,
-                    'customFlags' => ['--disable-gpu', '--disable-dev-shm-usage', '--no-first-run', '--disable-software-rasterizer'],
-                ]);
-                
-                $page = $browser->createPage();
-                $page->navigate('file://' . $tmpHtml)->waitForNavigation('networkIdle', 30000);
-                
-                // Wait for fonts and images to fully load
-                usleep(3000000); // 3 seconds
-                
-                // Generate PDF with exact page dimensions (842.25 x 1190.25 px)
-                $pdf = $page->pdf([
-                    'printBackground' => true,
-                    'paperWidth' => 8.27,   // ~210mm in inches (A4-ish width)
-                    'paperHeight' => 11.69, // ~297mm in inches
-                    'marginTop' => 0.0,
-                    'marginBottom' => 0.0,
-                    'marginLeft' => 0.0,
-                    'marginRight' => 0.0,
-                    'preferCSSPageSize' => true,
-                ]);
-                
-                $browser->close();
-                @unlink($tmpHtml);
-                
-                // Send PDF to browser
-                header('Content-Description: File Transfer');
-                header('Content-Type: application/pdf');
-                header('Content-Disposition: inline; filename="SickLeave_' . $sc . '.pdf"');
-                header('Content-Transfer-Encoding: binary');
-                header('Expires: 0');
-                header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
-                header('Pragma: public');
-                echo base64_decode($pdf->getBase64());
-                exit;
-            } catch (Exception $e) {
-                error_log('Chrome PDF Error: ' . $e->getMessage());
-                // Fall through to preview mode
-            }
-        }
-        // If Chrome not available or failed, redirect to preview mode
-        $pdfMode = 'preview';
-    }
+    // Always use preview mode - PDF is generated client-side via html2canvas + jsPDF
+    $pdfMode = 'preview';
 
     // ==================== PREVIEW MODE ====================
     header('Content-Type: text/html; charset=utf-8');
@@ -1146,14 +1066,8 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
     $html .= '@media print{@page{size:842.25px 1190.25px;margin:0}body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;background:white!important}.controls{display:none!important}.group1-container1{padding:0!important;background-color:transparent!important}.group1-thq-group1-elm{box-shadow:none!important;margin:0!important;transform:scale(1);transform-origin:top left}a{color:rgba(20,0,255,1)!important;text-decoration:underline!important}}';
     $html .= '</style></head><body>';
     $html .= '<div class="controls">';
-    // If Chrome PDF is available, use server-side PDF generation link
-    $pdfDownloadUrl = '?' . http_build_query(['action' => 'generate_pdf', 'leave_id' => $leave_id, 'pdf_mode' => 'download', 'csrf_token' => $_SESSION['csrf_token'] ?? '']);
-    $hasChrome = class_exists('\\HeadlessChromium\\BrowserFactory');
-    if ($hasChrome) {
-        $html .= '<a href="' . htmlspecialchars($pdfDownloadUrl) . '" class="download-btn" style="text-decoration:none">تحميل ملف PDF</a>';
-    } else {
-        $html .= '<button id="btnDownloadPDF" class="download-btn" onclick="downloadPDF()">تحميل ملف PDF</button>';
-    }
+    // PDF generated client-side via html2canvas + jsPDF (works on mobile & desktop)
+    $html .= '<button id="btnDownloadPDF" class="download-btn" onclick="downloadPDF()">تحميل ملف PDF</button>';
     $html .= '<button class="download-btn" style="background-color:#2c3e77" onclick="window.print()">طباعة مباشرة</button>';
     $html .= '</div>';
     $html .= '<div class="group1-container1"><div class="group1-thq-group1-elm" id="report-content">';
