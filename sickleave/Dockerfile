@@ -13,7 +13,7 @@ RUN a2dismod mpm_worker 2>/dev/null; \
     a2enmod mpm_prefork; \
     a2enmod rewrite
 
-# Install WeasyPrint + Arabic fonts + dependencies
+# Install WeasyPrint + Arabic fonts + dependencies (Debian Trixie compatible)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     python3 \
@@ -24,19 +24,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpangoft2-1.0-0 \
     libpangocairo-1.0-0 \
     libcairo2 \
-    libgdk-pixbuf2.0-0 \
+    libgdk-pixbuf-2.0-0 \
     libffi-dev \
     shared-mime-info \
-    fonts-noto-sans-arabic \
-    fonts-noto-sans \
+    fonts-noto-core \
+    fonts-noto-extra \
     fonts-liberation \
     fonts-dejavu-core \
     fonts-freefont-ttf \
     && pip3 install --no-cache-dir --break-system-packages weasyprint \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Verify WeasyPrint works
-RUN weasyprint --version
+# Verify WeasyPrint works and create symlinks so Apache/PHP can find them
+RUN weasyprint --version && \
+    ln -sf $(which python3) /usr/bin/python3 && \
+    ln -sf $(which weasyprint) /usr/bin/weasyprint
+
+# Ensure PATH includes pip install location for Apache subprocess
+ENV PATH="/usr/local/bin:/usr/bin:/bin:${PATH}"
 
 # Install Google Fonts (Inter, Noto Sans Arabic) for exact template match
 RUN mkdir -p /usr/share/fonts/google && \
@@ -76,10 +81,10 @@ RUN chown -R www-data:www-data /var/www/html
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 # PHP configuration
-RUN printf "upload_max_filesize = 20M\npost_max_size = 25M\nmemory_limit = 256M\nmax_execution_time = 60\n" > /usr/local/etc/php/conf.d/custom.ini
+RUN printf "upload_max_filesize = 20M\npost_max_size = 25M\nmemory_limit = 512M\nmax_execution_time = 120\n" > /usr/local/etc/php/conf.d/custom.ini
 
 # Create startup script
-RUN printf '#!/bin/bash\nset -e\nLISTEN_PORT="${PORT:-8080}"\na2dismod mpm_event 2>/dev/null || true\na2dismod mpm_worker 2>/dev/null || true\na2enmod mpm_prefork 2>/dev/null || true\necho "Listen ${LISTEN_PORT}" > /etc/apache2/ports.conf\nsed -i "s/<VirtualHost \\*:[0-9]*>/<VirtualHost *:${LISTEN_PORT}>/" /etc/apache2/sites-available/000-default.conf\necho "Starting Apache on port ${LISTEN_PORT}"\nexec apache2-foreground\n' > /usr/local/bin/start.sh \
+RUN printf '#!/bin/bash\nset -e\nexport PATH="/usr/local/bin:/usr/bin:/bin:$PATH"\nLISTEN_PORT="${PORT:-8080}"\na2dismod mpm_event 2>/dev/null || true\na2dismod mpm_worker 2>/dev/null || true\na2enmod mpm_prefork 2>/dev/null || true\necho "Listen ${LISTEN_PORT}" > /etc/apache2/ports.conf\nsed -i "s/<VirtualHost \\*:[0-9]*>/<VirtualHost *:${LISTEN_PORT}>/" /etc/apache2/sites-available/000-default.conf\necho "Starting Apache on port ${LISTEN_PORT}"\nexec apache2-foreground\n' > /usr/local/bin/start.sh \
     && chmod +x /usr/local/bin/start.sh
 
 EXPOSE 8080
