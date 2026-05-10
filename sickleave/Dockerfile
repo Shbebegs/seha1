@@ -3,18 +3,16 @@ FROM php:8.2-apache
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# Install system dependencies required by mPDF (GD, freetype, mbstring, etc.)
+# Install the docker-php-extension-installer (most reliable way to install PHP extensions)
+ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
+RUN chmod +x /usr/local/bin/install-php-extensions
+
+# Install PHP extensions using the reliable installer
+RUN install-php-extensions gd pdo_mysql mbstring zip
+
+# Install system tools needed for Composer
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libfreetype6-dev \
-    libjpeg62-turbo-dev \
-    libpng-dev \
-    libwebp-dev \
-    libzip-dev \
-    zlib1g-dev \
     unzip \
-    git \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql mbstring zip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
@@ -34,9 +32,6 @@ COPY . .
 
 # Create temp directory for mPDF with proper permissions
 RUN mkdir -p /tmp/mpdf && chmod 777 /tmp/mpdf
-
-# Create uploads directory (even though we use DB for logos, just in case)
-RUN mkdir -p /var/www/html/uploads/hospital-logos && chmod 777 /var/www/html/uploads/hospital-logos
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
