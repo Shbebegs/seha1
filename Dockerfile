@@ -1,6 +1,6 @@
 FROM php:8.2-apache
 
-# Install the docker-php-extension-installer (most reliable way)
+# Install the docker-php-extension-installer
 ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
 RUN chmod +x /usr/local/bin/install-php-extensions
 
@@ -13,9 +13,29 @@ RUN a2dismod mpm_worker 2>/dev/null; \
     a2enmod mpm_prefork; \
     a2enmod rewrite
 
-# Install system tools needed for Composer
+# Install Chromium and dependencies for headless PDF generation
 RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
+    chromium \
+    fonts-liberation \
+    fonts-noto-color-emoji \
+    fonts-noto-cjk \
+    fonts-freefont-ttf \
+    fonts-dejavu-core \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libcups2 \
+    libatspi2.0-0 \
+    libxshmfence1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
@@ -24,10 +44,10 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy all project files first
+# Copy all project files
 COPY . .
 
-# Install PHP dependencies (mPDF) in BOTH root and sickleave directory
+# Install PHP dependencies in both root and sickleave directory
 RUN if [ -f /var/www/html/composer.json ]; then \
         cd /var/www/html && composer install --no-dev --optimize-autoloader --no-interaction; \
     fi && \
@@ -35,8 +55,8 @@ RUN if [ -f /var/www/html/composer.json ]; then \
         cd /var/www/html/sickleave && composer install --no-dev --optimize-autoloader --no-interaction; \
     fi
 
-# Create temp directory for mPDF with proper permissions
-RUN mkdir -p /tmp/mpdf && chmod 777 /tmp/mpdf
+# Create temp directory for PDF generation
+RUN mkdir -p /tmp/chrome-pdf && chmod 777 /tmp/chrome-pdf
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
@@ -45,7 +65,10 @@ RUN chown -R www-data:www-data /var/www/html
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 # PHP configuration
-RUN printf "upload_max_filesize = 20M\npost_max_size = 25M\nmemory_limit = 256M\nmax_execution_time = 120\n" > /usr/local/etc/php/conf.d/custom.ini
+RUN printf "upload_max_filesize = 20M\npost_max_size = 25M\nmemory_limit = 512M\nmax_execution_time = 120\n" > /usr/local/etc/php/conf.d/custom.ini
+
+# Set Chromium path as environment variable
+ENV CHROMIUM_PATH=/usr/bin/chromium
 
 # Create startup script
 RUN printf '#!/bin/bash\nset -e\nLISTEN_PORT="${PORT:-8080}"\na2dismod mpm_event 2>/dev/null || true\na2dismod mpm_worker 2>/dev/null || true\na2enmod mpm_prefork 2>/dev/null || true\necho "Listen ${LISTEN_PORT}" > /etc/apache2/ports.conf\nsed -i "s/<VirtualHost \\*:[0-9]*>/<VirtualHost *:${LISTEN_PORT}>/" /etc/apache2/sites-available/000-default.conf\necho "Starting Apache on port ${LISTEN_PORT}"\nexec apache2-foreground\n' > /usr/local/bin/start.sh \
