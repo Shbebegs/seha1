@@ -5,7 +5,7 @@ ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/do
 RUN chmod +x /usr/local/bin/install-php-extensions
 
 # Install PHP extensions
-RUN install-php-extensions gd pdo_mysql mbstring zip sockets
+RUN install-php-extensions gd pdo_mysql mbstring zip
 
 # Fix MPM conflict AFTER extensions are installed
 RUN a2dismod mpm_worker 2>/dev/null; \
@@ -13,30 +13,41 @@ RUN a2dismod mpm_worker 2>/dev/null; \
     a2enmod mpm_prefork; \
     a2enmod rewrite
 
-# Install Chromium and dependencies for headless PDF generation
+# Install WeasyPrint + Arabic fonts + dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
-    chromium \
-    fonts-liberation \
-    fonts-noto-color-emoji \
-    fonts-noto-cjk \
-    fonts-freefont-ttf \
-    fonts-dejavu-core \
-    libnss3 \
-    libatk-bridge2.0-0 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    libgbm1 \
-    libasound2 \
+    python3 \
+    python3-pip \
+    python3-cffi \
+    python3-brotli \
     libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libpangocairo-1.0-0 \
     libcairo2 \
-    libcups2 \
-    libatspi2.0-0 \
-    libxshmfence1 \
+    libgdk-pixbuf2.0-0 \
+    libffi-dev \
+    shared-mime-info \
+    fonts-noto-sans-arabic \
+    fonts-noto-sans \
+    fonts-liberation \
+    fonts-dejavu-core \
+    fonts-freefont-ttf \
+    && pip3 install --no-cache-dir --break-system-packages weasyprint \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Verify WeasyPrint works
+RUN weasyprint --version
+
+# Install Google Fonts (Inter, Noto Sans Arabic) for exact template match
+RUN mkdir -p /usr/share/fonts/google && \
+    apt-get update && apt-get install -y --no-install-recommends wget && \
+    wget -q -O /tmp/inter.zip "https://fonts.google.com/download?family=Inter" && \
+    unzip -q /tmp/inter.zip -d /usr/share/fonts/google/inter/ 2>/dev/null || true && \
+    wget -q -O /tmp/noto-ar.zip "https://fonts.google.com/download?family=Noto+Sans+Arabic" && \
+    unzip -q /tmp/noto-ar.zip -d /usr/share/fonts/google/noto-arabic/ 2>/dev/null || true && \
+    rm -f /tmp/inter.zip /tmp/noto-ar.zip && \
+    fc-cache -f -v && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -56,7 +67,7 @@ RUN if [ -f /var/www/html/composer.json ]; then \
     fi
 
 # Create temp directory for PDF generation
-RUN mkdir -p /tmp/chrome-pdf && chmod 777 /tmp/chrome-pdf
+RUN mkdir -p /tmp/weasyprint && chmod 777 /tmp/weasyprint
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
@@ -65,10 +76,7 @@ RUN chown -R www-data:www-data /var/www/html
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 # PHP configuration
-RUN printf "upload_max_filesize = 20M\npost_max_size = 25M\nmemory_limit = 512M\nmax_execution_time = 120\n" > /usr/local/etc/php/conf.d/custom.ini
-
-# Set Chromium path as environment variable
-ENV CHROMIUM_PATH=/usr/bin/chromium
+RUN printf "upload_max_filesize = 20M\npost_max_size = 25M\nmemory_limit = 256M\nmax_execution_time = 60\n" > /usr/local/etc/php/conf.d/custom.ini
 
 # Create startup script
 RUN printf '#!/bin/bash\nset -e\nLISTEN_PORT="${PORT:-8080}"\na2dismod mpm_event 2>/dev/null || true\na2dismod mpm_worker 2>/dev/null || true\na2enmod mpm_prefork 2>/dev/null || true\necho "Listen ${LISTEN_PORT}" > /etc/apache2/ports.conf\nsed -i "s/<VirtualHost \\*:[0-9]*>/<VirtualHost *:${LISTEN_PORT}>/" /etc/apache2/sites-available/000-default.conf\necho "Starting Apache on port ${LISTEN_PORT}"\nexec apache2-foreground\n' > /usr/local/bin/start.sh \
