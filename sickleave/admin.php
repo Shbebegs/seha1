@@ -11,6 +11,12 @@
  * 5. تحسينات عامة في الأداء والأمان
  */
 
+// تحميل مكتبات Composer (mPDF)
+$autoloadPath = __DIR__ . '/vendor/autoload.php';
+if (file_exists($autoloadPath)) {
+    require_once $autoloadPath;
+}
+
 ini_set('session.use_only_cookies', '1');
 ini_set('session.cookie_httponly', '1');
 ini_set('session.cookie_secure', (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? '1' : '0');
@@ -2426,10 +2432,137 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             // Duration line AR
             $durationAr = '<span style="font-family: \'Times New Roman\', serif; font-size: 14.5px; font-weight: 400;">' . $daysAr . '</span> <span style="font-family: \'Noto Sans Arabic\', sans-serif; font-size: 14.5px; font-weight: 400;">' . $daysArWord . '</span> ( ' . $startHj . ' الى ' . $endHj . ' )';
 
-            // Build the HTML
-            // Output HTML directly for printing
+            // Check if mPDF download requested
+            $pdfMode = $_GET['pdf_mode'] ?? $_POST['pdf_mode'] ?? 'preview';
+
+            // Build the HTML for the report body (shared between preview and PDF)
+            $reportCSS = '';
+            $reportCSS .= 'html{line-height:1.15}body{margin:0}*{box-sizing:border-box;border-width:0;border-style:solid;-webkit-font-smoothing:antialiased}p,li,ul,pre,div,h1,h2,h3,h4,h5,h6,figure,blockquote,figcaption{margin:0;padding:0}a{color:inherit;text-decoration:inherit}';
+            $reportCSS .= '.report-page{width:842px;height:1190px;position:relative;background-color:white;font-family:"Inter",sans-serif;font-size:16px;font-weight:400;color:#191818;overflow:hidden}';
+            $reportCSS .= '.info-table{position:absolute;top:242px;left:36px;width:770px;border-collapse:separate;border-spacing:0;border:1px solid #ccc;border-radius:8px;overflow:hidden;background-color:transparent;z-index:10}';
+            $reportCSS .= '.info-table td{border-bottom:1px solid #ccc;border-right:1px solid #ccc;height:42px;text-align:center;vertical-align:middle;padding:4px 8px}';
+            $reportCSS .= '.info-table td:last-child{border-right:none}.info-table tr:last-child td{border-bottom:none}';
+            $reportCSS .= '.info-table .en-title{width:161px;color:rgba(54,111,181,1);font-size:13.5px;font-weight:700;text-align:center;font-family:"Times New Roman",serif}';
+            $reportCSS .= '.info-table .data-cell{width:240px;color:rgba(44,62,119,1);font-size:13.5px;font-family:"Times New Roman",serif;font-weight:400;text-align:center}';
+            $reportCSS .= '.info-table .date-cell{font-size:13.9px}.info-table .data-cell.ar-text{font-family:"Noto Sans Arabic"}';
+            $reportCSS .= '.info-table .ar-title{width:140px;color:rgba(54,111,181,1);font-size:13.5px;font-weight:700;text-align:center;font-family:"Noto Sans Arabic";white-space:nowrap}';
+            $reportCSS .= '.info-table tr.blue-row td{background-color:#2c3e77;color:#fff;border-bottom:1px solid #ccc;border-right:1px solid #ccc}';
+            $reportCSS .= '.info-table tr.blue-row td:last-child{border-right:none}';
+            $reportCSS .= '.info-table .blue-row .data-cell.ar-text{color:rgba(255,255,255,1);font-size:13.5px;font-family:"Times New Roman",serif;font-weight:400}';
+            $reportCSS .= '.info-table .blue-row .data-cell{color:rgba(255,255,255,1)}';
+            $reportCSS .= '.info-table tr.gray-row td{background-color:#f7f7f7}';
+            $reportCSS .= '.en-spaced{letter-spacing:0.3px}';
+            $reportCSS .= ':root{--footer-offset:40px}';
+            $reportCSS .= '.group1-thq-staticinfo-elm{top:125px;left:36.65px;width:768.35px;height:811.91px;display:flex;position:absolute;align-items:flex-start;pointer-events:none}';
+            $reportCSS .= '.top-right-placeholder{position:absolute;top:36px;left:592px;width:214px;height:107px;display:flex;align-items:center;justify-content:center;font-size:14px;z-index:5}';
+            $reportCSS .= '.top-left-placeholder{position:absolute;top:36px;left:36px;width:149.96px;height:65.98px;display:flex;align-items:center;justify-content:center;font-size:14px;z-index:5}';
+            $reportCSS .= '.bottom-right-placeholder{position:absolute;top:1005px;left:657.17px;width:149.96px;height:71.23px;display:flex;align-items:center;justify-content:center;font-size:12px;z-index:5}';
+            $reportCSS .= '.header-placeholder{top:-55px;left:320px;width:160px;height:50px;position:absolute;display:flex;align-items:center;justify-content:center;font-size:11px}';
+            $reportCSS .= '.group1-thq-text-elm41{top:40px;left:289px;color:rgba(48,109,181,1);width:215px;position:absolute;font-size:22.5px;font-weight:700;text-align:center;line-height:30px}';
+            $reportCSS .= '.group1-thq-text-elm44{top:-10px;left:310px;color:rgba(0,0,0,1);position:absolute;font-size:17.3px;font-weight:400;text-align:left;font-family:"Times New Roman",serif}';
+            $reportCSS .= '.group1-thq-hospitallogoandthename-elm{top:760px;left:438.94px;width:403px;height:202.78px;display:flex;position:absolute;align-items:flex-start}';
+            $reportCSS .= '.placeholder-logo-hospital{top:-12px;left:133px;width:136px;height:136px;position:absolute;display:flex;align-items:center;justify-content:center;font-size:12px}';
+            $reportCSS .= '.group1-thq-text-elm18{top:120px;color:rgba(0,0,0,1);width:403px;height:auto;position:absolute;font-size:12.8px;text-align:center;line-height:22px}';
+            $reportCSS .= '.group1-thq-thedateofissueandalsotimeofissue-elm{top:calc(989.85px + var(--footer-offset));left:37.37px;width:250px;height:56px;display:flex;position:absolute;align-items:flex-start}';
+            $reportCSS .= '.group1-thq-text-elm22{color:rgba(0,0,0,1);font-size:12.5px;font-weight:700;text-align:left;line-height:28px;font-family:"Times New Roman",serif;font-weight:bold;position:absolute;white-space:nowrap}';
+            $reportCSS .= '.group1-thq-text-elm36{top:calc(724.55px + var(--footer-offset));left:29.23px;color:rgba(0,0,0,1);position:absolute;font-size:12px;font-weight:700;text-align:center;font-family:"Noto Sans Arabic";line-height:23px}';
+            $reportCSS .= '.group1-thq-text-elm39{top:calc(775.17px + var(--footer-offset));left:55px;color:rgba(0,0,0,1);position:absolute;font-size:12px;font-weight:700;text-align:left;font-family:"Times New Roman",serif;font-weight:bold}';
+            $reportCSS .= '.group1-thq-text-elm40{top:calc(798.91px + var(--footer-offset));left:108.35px;color:rgba(20,0,255,1);position:absolute;font-size:11px;font-weight:700;text-align:left;text-decoration:underline;pointer-events:auto;font-family:"Times New Roman",serif;font-weight:bold}';
+            $reportCSS .= '.placeholder-136{position:absolute;top:620px;left:122px;width:136px;height:136px;display:flex;align-items:center;justify-content:center;font-size:12px;pointer-events:auto}';
+            $reportCSS .= '.vertical-divider{position:absolute;top:735px;left:436px;width:1px;height:7cm;background-color:#ddd}';
+            $reportCSS .= '.thin-slash{font-weight:300;font-family:"Inter",sans-serif;margin:0 3px;display:inline-block}';
+
+            // Build report body HTML
+            $reportBody = '';
+            $reportBody .= '<div class="report-page">';
+            $reportBody .= '<div class="top-right-placeholder"><img src="sehalogoright.svg" style="width:100%;height:100%"/></div>';
+            $reportBody .= '<div class="top-left-placeholder"><img src="sehalogoleft.svg" style="width:100%;height:100%"/></div>';
+            $reportBody .= '<div class="bottom-right-placeholder"><img src="bottomright.svg" style="width:100%;height:100%"/></div>';
+            $reportBody .= '<div class="group1-thq-staticinfo-elm">';
+            $reportBody .= '<div class="header-placeholder"><img src="header.svg" style="width:100%;height:100%"/></div>';
+            $reportBody .= '<span class="group1-thq-text-elm41"><span style="font-size:22.5px;font-family:\'Noto sans arabic\',serif;font-weight:700;color:#306db5">تقرير إجازة مرضية</span><br/><span style="font-size:18.7px;font-family:\'Times New Roman\',serif;font-weight:700;color:#2c3e77">Sick Leave Report</span></span>';
+            $reportBody .= '<span class="group1-thq-text-elm44">Kingdom of Saudi Arabia</span>';
+            $reportBody .= '<div class="placeholder-136"><img src="qr.svg" style="width:130px;height:130px"/></div>';
+            $reportBody .= '<span class="group1-thq-text-elm36" dir="rtl">للتحقق من بيانات التقرير يرجى التأكد من زيارة موقع منصة صحة<br/>الرسمي</span>';
+            $reportBody .= '<span class="group1-thq-text-elm39">To check the report please visit Seha\'s official website</span>';
+            $reportBody .= '<span class="group1-thq-text-elm40"><a href="https://seha-sa-iniquiries-slenquiry.up.railway.app/" target="_blank">www.seha.sa/#/inquiries/slenquiry</a></span>';
+            $reportBody .= '</div>';
+            // Table
+            $reportBody .= '<table class="info-table" cellpadding="0" cellspacing="0"><tbody>';
+            $reportBody .= '<tr><td class="en-title">Leave ID</td><td class="data-cell" colspan="2">' . $sc . '</td><td class="ar-title">رمز الإجازة</td></tr>';
+            $reportBody .= '<tr class="blue-row"><td class="en-title" style="color:white">Leave Duration</td><td class="data-cell">' . $durationEn . '</td><td class="data-cell ar-text" dir="rtl">' . $durationAr . '</td><td class="ar-title" style="color:white">مدة الإجازة</td></tr>';
+            $reportBody .= '<tr><td class="en-title">Admission Date</td><td class="data-cell date-cell">' . $startEn . '</td><td class="data-cell date-cell">' . $startHj . '</td><td class="ar-title">تاريخ الدخول</td></tr>';
+            $reportBody .= '<tr class="gray-row"><td class="en-title">Discharge Date</td><td class="data-cell date-cell">' . $endEn . '</td><td class="data-cell date-cell">' . $endHj . '</td><td class="ar-title">تاريخ الخروج</td></tr>';
+            $reportBody .= '<tr><td class="en-title">Issue Date</td><td class="data-cell" colspan="2">' . $issueEn . '</td><td class="ar-title">تاريخ الإصدار</td></tr>';
+            $reportBody .= '<tr class="gray-row"><td class="en-title">Patient Name</td><td class="data-cell en-spaced">' . $patNameEn . '</td><td class="data-cell ar-text">' . $patNameAr . '</td><td class="ar-title">الاسم</td></tr>';
+            $reportBody .= '<tr><td class="en-title">National ID / Iqama</td><td class="data-cell" colspan="2">' . $patId . '</td><td class="ar-title">رقم الهوية<span class="thin-slash">/</span>الإقامة</td></tr>';
+            $reportBody .= '<tr class="gray-row"><td class="en-title">Nationality</td><td class="data-cell en-spaced">' . $natEn . '</td><td class="data-cell ar-text">' . $natAr . '</td><td class="ar-title">الجنسية</td></tr>';
+            $reportBody .= '<tr><td class="en-title">Employer</td><td class="data-cell en-spaced">' . $empEn . '</td><td class="data-cell ar-text">' . $empAr . '</td><td class="ar-title">جهة العمل</td></tr>';
+            $reportBody .= '<tr class="gray-row"><td class="en-title">Physician Name</td><td class="data-cell en-spaced">' . $docNameEn . '</td><td class="data-cell ar-text">' . $docNameAr . '</td><td class="ar-title">اسم الطبيب المعالج</td></tr>';
+            $reportBody .= '<tr><td class="en-title">Position</td><td class="data-cell en-spaced">' . $docTitleEn . '</td><td class="data-cell ar-text">' . $docTitleAr . '</td><td class="ar-title">المسمى الوظيفي</td></tr>';
+            $reportBody .= '</tbody></table>';
+            $reportBody .= '<div class="vertical-divider"></div>';
+            // Hospital section
+            $reportBody .= '<div class="group1-thq-hospitallogoandthename-elm">';
+            $reportBody .= '<div class="placeholder-logo-hospital">' . $hospLogoHtml . '</div>';
+            $reportBody .= '<span class="group1-thq-text-elm18">';
+            $reportBody .= '<span style="font-family:\'Noto Sans Arabic\',sans-serif;font-weight:700">' . $hospNameAr . '</span><br/>';
+            $reportBody .= '<span class="en-spaced" style="font-family:\'Times New Roman\',serif;font-weight:700">' . $hospNameEn . '</span><br/>';
+            if (!empty($licenseHtml)) $reportBody .= $licenseHtml;
+            $reportBody .= '</span></div>';
+            // Timestamp
+            $reportBody .= '<div class="group1-thq-thedateofissueandalsotimeofissue-elm">';
+            $reportBody .= '<span class="group1-thq-text-elm22">';
+            $reportBody .= '<span>' . $timestampLine . '</span><br/>';
+            $reportBody .= '<span>' . $dateLine . '</span>';
+            $reportBody .= '</span></div>';
+            $reportBody .= '</div>';
+
+            // ==================== PDF MODE: mPDF ====================
+            if ($pdfMode === 'download' && class_exists('\\Mpdf\\Mpdf')) {
+                try {
+                    $mpdf = new \Mpdf\Mpdf([
+                        'mode' => 'utf-8',
+                        'format' => [222.8, 314.9], // 842px x 1190px in mm (at 96dpi)
+                        'margin_left' => 0,
+                        'margin_right' => 0,
+                        'margin_top' => 0,
+                        'margin_bottom' => 0,
+                        'default_font' => 'times',
+                        'tempDir' => sys_get_temp_dir() . '/mpdf',
+                    ]);
+                    $mpdf->autoScriptToLang = true;
+                    $mpdf->autoLangToFont = true;
+                    $mpdf->SetDirectionality('ltr');
+                    
+                    // Convert SVG references to absolute paths for mPDF
+                    $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']) . '/';
+                    $pdfBody = str_replace(
+                        ['src="sehalogoright.svg"', 'src="sehalogoleft.svg"', 'src="bottomright.svg"', 'src="header.svg"', 'src="qr.svg"'],
+                        ['src="' . $baseUrl . 'sehalogoright.svg"', 'src="' . $baseUrl . 'sehalogoleft.svg"', 'src="' . $baseUrl . 'bottomright.svg"', 'src="' . $baseUrl . 'header.svg"', 'src="' . $baseUrl . 'qr.svg"'],
+                        $reportBody
+                    );
+                    
+                    $pdfHtml = '<html><head><style>' . $reportCSS . '</style></head><body>' . $pdfBody . '</body></html>';
+                    $mpdf->WriteHTML($pdfHtml);
+                    $mpdf->Output('SickLeave_' . $sc . '.pdf', \Mpdf\Output\Destination::DOWNLOAD);
+                    exit;
+                } catch (Exception $e) {
+                    // Fallback to preview if mPDF fails
+                    error_log('mPDF Error: ' . $e->getMessage());
+                }
+            }
+
+            // ==================== PREVIEW MODE: HTML (uses shared $reportBody) ====================
             header('Content-Type: text/html; charset=utf-8');
-            $html = '<!DOCTYPE html><html lang="ar"><head><title>تقرير إجازة مرضية - Sick Leave Report</title><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>';
+            $pdfDownloadUrl = '?' . http_build_query(['action' => 'generate_pdf', 'leave_id' => $leave_id, 'pdf_mode' => 'download', 'csrf_token' => $_SESSION['csrf_token'] ?? '']);
+            
+            // Build the preview HTML using the EXACT original template structure
+            $html = '<!DOCTYPE html>';
+            $html .= '<html lang="ar"><head>';
+            $html .= '<title>تقرير إجازة مرضية - Sick Leave Report</title>';
+            $html .= '<meta charset="utf-8"/>';
+            $html .= '<meta name="viewport" content="width=900, initial-scale=0.45, maximum-scale=2.0, user-scalable=yes"/>';
             $html .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap"/>';
             $html .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap"/>';
             $html .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap"/>';
@@ -2437,101 +2570,26 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $html .= 'html{line-height:1.15}body{margin:0}*{box-sizing:border-box;border-width:0;border-style:solid;-webkit-font-smoothing:antialiased}p,li,ul,pre,div,h1,h2,h3,h4,h5,h6,figure,blockquote,figcaption{margin:0;padding:0}a{color:inherit;text-decoration:inherit}html{scroll-behavior:smooth;font-family:Inter,sans-serif;font-size:16px}body{font-weight:400;color:#191818;background:#FBFAF9}';
             $html .= '.group1-container1{width:100%;display:flex;overflow:auto;min-height:100vh;align-items:center;flex-direction:column;background-color:#f0f0f0;padding-top:20px;padding-bottom:20px}';
             $html .= '.group1-thq-group1-elm{width:842.25px;height:1190.25px;display:flex;position:relative;align-items:flex-start;flex-shrink:0;box-shadow:0px 4px 15px rgba(0,0,0,0.1);background-color:white}';
-            $html .= '.info-table{position:absolute;top:242px;left:36px;width:770px;border-collapse:separate;border-spacing:0;border:1px solid #ccc;border-radius:8px;overflow:hidden;background-color:transparent;z-index:10}';
-            $html .= '.info-table td{border-bottom:1px solid #ccc;border-right:1px solid #ccc;height:42px;text-align:center;vertical-align:middle;padding:4px 8px}';
-            $html .= '.info-table td:last-child{border-right:none}.info-table tr:last-child td{border-bottom:none}';
-            $html .= '.info-table .en-title{width:161px;color:rgba(54,111,181,1);font-size:13.5px;font-weight:700;text-align:center;font-family:"Times New Roman",serif}';
-            $html .= '.info-table .data-cell{width:240px;color:rgba(44,62,119,1);font-size:13.5px;font-family:"Times New Roman",serif;font-weight:400;text-align:center}';
-            $html .= '.info-table .date-cell{font-size:13.9px}.info-table .data-cell.ar-text{font-family:"Noto Sans Arabic"}';
-            $html .= '.info-table .ar-title{width:140px;color:rgba(54,111,181,1);font-size:13.5px;font-weight:700;text-align:center;font-family:"Noto Sans Arabic";white-space:nowrap}';
-            $html .= '.info-table tr.blue-row td{background-color:#2c3e77;color:#fff;border-bottom:1px solid #ccc;border-right:1px solid #ccc}';
-            $html .= '.info-table tr.blue-row td:last-child{border-right:none}';
-            $html .= '.info-table .blue-row .data-cell.ar-text{color:rgba(255,255,255,1);font-size:13.5px;font-family:"Times New Roman",serif;font-weight:400}';
-            $html .= '.info-table .blue-row .data-cell{color:rgba(255,255,255,1)}';
-            $html .= '.info-table tr.gray-row td{background-color:#f7f7f7}';
-            $html .= '.en-spaced{letter-spacing:0.3px}';
-            $html .= ':root{--footer-offset:40px}';
-            $html .= '.group1-thq-staticinfo-elm{top:125px;left:36.65px;width:768.35px;height:811.91px;display:flex;position:absolute;align-items:flex-start;pointer-events:none}';
-            $html .= '.top-right-placeholder{position:absolute;top:36px;left:592px;width:214px;height:107px;display:flex;align-items:center;justify-content:center;font-size:14px;z-index:5}';
-            $html .= '.top-left-placeholder{position:absolute;top:36px;left:36px;width:149.96px;height:65.98px;display:flex;align-items:center;justify-content:center;font-size:14px;z-index:5}';
-            $html .= '.bottom-right-placeholder{position:absolute;top:1005px;left:657.17px;width:149.96px;height:71.23px;display:flex;align-items:center;justify-content:center;font-size:12px;z-index:5}';
-            $html .= '.header-placeholder{top:-55px;left:320px;width:160px;height:50px;position:absolute;display:flex;align-items:center;justify-content:center;font-size:11px}';
-            $html .= '.group1-thq-text-elm41{top:40px;left:289px;color:rgba(48,109,181,1);width:215px;position:absolute;font-size:22.5px;font-weight:700;text-align:center;line-height:30px}';
-            $html .= '.group1-thq-text-elm44{top:-10px;left:310px;color:rgba(0,0,0,1);position:absolute;font-size:17.3px;font-weight:400;text-align:left;font-family:"Times New Roman",serif}';
-            $html .= '.group1-thq-hospitallogoandthename-elm{top:760px;left:438.94px;width:403px;height:202.78px;display:flex;position:absolute;align-items:flex-start}';
-            $html .= '.placeholder-logo-hospital{top:-12px;left:133px;width:136px;height:136px;position:absolute;display:flex;align-items:center;justify-content:center;font-size:12px}';
-            $html .= '.group1-thq-text-elm18{top:120px;color:rgba(0,0,0,1);width:403px;height:auto;position:absolute;font-size:12.8px;text-align:center;line-height:22px}';
-            $html .= '.group1-thq-thedateofissueandalsotimeofissue-elm{top:calc(989.85px + var(--footer-offset));left:37.37px;width:250px;height:56px;display:flex;position:absolute;align-items:flex-start}';
-            $html .= '.group1-thq-text-elm22{color:rgba(0,0,0,1);font-size:12.5px;font-weight:700;text-align:left;line-height:28px;font-family:"Times New Roman",serif;font-weight:bold;position:absolute;white-space:nowrap}';
-            $html .= '.group1-thq-text-elm36{top:calc(724.55px + var(--footer-offset));left:29.23px;color:rgba(0,0,0,1);position:absolute;font-size:12px;font-weight:700;text-align:center;font-family:"Noto Sans Arabic";line-height:23px}';
-            $html .= '.group1-thq-text-elm39{top:calc(775.17px + var(--footer-offset));left:55px;color:rgba(0,0,0,1);position:absolute;font-size:12px;font-weight:700;text-align:left;font-family:"Times New Roman",serif;font-weight:bold}';
-            $html .= '.group1-thq-text-elm40{top:calc(798.91px + var(--footer-offset));left:108.35px;color:rgba(20,0,255,1);position:absolute;font-size:11px;font-weight:700;text-align:left;text-decoration:underline;pointer-events:auto;font-family:"Times New Roman",serif;font-weight:bold}';
-            $html .= '.placeholder-136{position:absolute;top:620px;left:122px;width:136px;height:136px;display:flex;align-items:center;justify-content:center;font-size:12px;pointer-events:auto}';
-            $html .= '.vertical-divider{position:absolute;top:735px;left:436px;width:1px;height:7cm;background-color:#ddd}';
-            $html .= '.thin-slash{font-weight:300;font-family:"Inter",sans-serif;margin:0 3px;display:inline-block}';
+            $html .= $reportCSS;
             $html .= '.controls{position:fixed;bottom:30px;right:30px;display:flex;gap:15px;z-index:1000}';
             $html .= '.download-btn{background-color:#306db5;color:white;padding:14px 28px;border-radius:10px;border:none;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0px 6px 15px rgba(0,0,0,0.3);font-family:"Inter",sans-serif;transition:all 0.3s cubic-bezier(0.4,0,0.2,1)}';
             $html .= '.download-btn:hover{background-color:#2c3e77;transform:translateY(-3px);box-shadow:0px 8px 20px rgba(0,0,0,0.4)}.download-btn:active{transform:translateY(-1px)}';
             $html .= '@media print{@page{size:842.25px 1190.25px;margin:0}body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;background:white!important}.controls{display:none!important}.group1-container1{padding:0!important;background-color:transparent!important}.group1-thq-group1-elm{box-shadow:none!important;margin:0!important;transform:scale(1);transform-origin:top left}a{color:rgba(20,0,255,1)!important;text-decoration:underline!important}}';
             $html .= '</style></head><body>';
-            $html .= '<div class="controls"><button class="download-btn" onclick="window.print()">تحميل ملف PDF (جودة كانفا)</button></div>';
-            $html .= '<div class="group1-container1"><div class="group1-thq-group1-elm" id="report-content">';
-            // Side placeholders
-            $html .= '<div class="top-right-placeholder"><img src="sehalogoright.svg" alt="Logo" style="width:100%;height:100%"/></div>';
-            $html .= '<div class="top-left-placeholder"><img src="sehalogoleft.svg" alt="Logo" style="width:100%;height:100%"/></div>';
-            $html .= '<div class="bottom-right-placeholder"><img src="bottomright.svg" alt="Signature" style="width:100%;height:100%"/></div>';
-            // Headers
-            $html .= '<div class="group1-thq-staticinfo-elm">';
-            $html .= '<div class="header-placeholder"><img src="header.svg" alt="Header" style="width:100%;height:100%"/></div>';
-            $html .= '<span class="group1-thq-text-elm41"><span style="font-size:22.5px;font-family:\'Noto sans arabic\',serif;font-weight:700;color:#306db5">تقرير إجازة مرضية</span><br/><span style="font-size:18.7px;font-family:\'Times New Roman\',serif;font-weight:700;color:#2c3e77">Sick Leave Report</span></span>';
-            $html .= '<span class="group1-thq-text-elm44">Kingdom of Saudi Arabia</span>';
-            $html .= '<div class="placeholder-136"><img src="qr.svg" alt="QR Code" style="width:130px;height:130px"/></div>';
-            $html .= '<span class="group1-thq-text-elm36" dir="rtl">للتحقق من بيانات التقرير يرجى التأكد من زيارة موقع منصة صحة<br/>الرسمي</span>';
-            $html .= '<span class="group1-thq-text-elm39">To check the report please visit Seha\'s official website</span>';
-            $html .= '<span class="group1-thq-text-elm40"><a href="https://seha-sa-iniquiries-slenquiry.up.railway.app/" target="_blank">www.seha.sa/#/inquiries/slenquiry</a></span>';
+            // Buttons
+            $html .= '<div class="controls">';
+            $html .= '<a href="' . htmlspecialchars($pdfDownloadUrl) . '" class="download-btn" style="text-decoration:none">تحميل ملف PDF</a>';
+            $html .= '<button class="download-btn" style="background-color:#2c3e77" onclick="window.print()">طباعة مباشرة</button>';
             $html .= '</div>';
-            // Table
-            $html .= '<table class="info-table" cellpadding="0" cellspacing="0"><tbody>';
-            // Row 1: Leave ID
-            $html .= '<tr><td class="en-title">Leave ID</td><td class="data-cell" colspan="2">' . $sc . '</td><td class="ar-title">رمز الإجازة</td></tr>';
-            // Row 2: Leave Duration (blue)
-            $html .= '<tr class="blue-row"><td class="en-title" style="color:white">Leave Duration</td><td class="data-cell">' . $durationEn . '</td><td class="data-cell ar-text" dir="rtl">' . $durationAr . '</td><td class="ar-title" style="color:white">مدة الإجازة</td></tr>';
-            // Row 3: Admission Date
-            $html .= '<tr><td class="en-title">Admission Date</td><td class="data-cell date-cell">' . $startEn . '</td><td class="data-cell date-cell">' . $startHj . '</td><td class="ar-title">تاريخ الدخول</td></tr>';
-            // Row 4: Discharge Date (gray)
-            $html .= '<tr class="gray-row"><td class="en-title">Discharge Date</td><td class="data-cell date-cell">' . $endEn . '</td><td class="data-cell date-cell">' . $endHj . '</td><td class="ar-title">تاريخ الخروج</td></tr>';
-            // Row 5: Issue Date
-            $html .= '<tr><td class="en-title">Issue Date</td><td class="data-cell" colspan="2">' . $issueEn . '</td><td class="ar-title">تاريخ الإصدار</td></tr>';
-            // Row 6: Patient Name (gray)
-            $html .= '<tr class="gray-row"><td class="en-title">Patient Name</td><td class="data-cell en-spaced">' . $patNameEn . '</td><td class="data-cell ar-text">' . $patNameAr . '</td><td class="ar-title">الاسم</td></tr>';
-            // Row 7: National ID
-            $html .= '<tr><td class="en-title">National ID / Iqama</td><td class="data-cell" colspan="2">' . $patId . '</td><td class="ar-title">رقم الهوية<span class="thin-slash">/</span>الإقامة</td></tr>';
-            // Row 8: Nationality (gray)
-            $html .= '<tr class="gray-row"><td class="en-title">Nationality</td><td class="data-cell en-spaced">' . $natEn . '</td><td class="data-cell ar-text">' . $natAr . '</td><td class="ar-title">الجنسية</td></tr>';
-            // Row 9: Employer
-            $html .= '<tr><td class="en-title">Employer</td><td class="data-cell en-spaced">' . $empEn . '</td><td class="data-cell ar-text">' . $empAr . '</td><td class="ar-title">جهة العمل</td></tr>';
-            // Row 10: Physician Name (gray)
-            $html .= '<tr class="gray-row"><td class="en-title">Physician Name</td><td class="data-cell en-spaced">' . $docNameEn . '</td><td class="data-cell ar-text">' . $docNameAr . '</td><td class="ar-title">اسم الطبيب المعالج</td></tr>';
-            // Row 11: Position
-            $html .= '<tr><td class="en-title">Position</td><td class="data-cell en-spaced">' . $docTitleEn . '</td><td class="data-cell ar-text">' . $docTitleAr . '</td><td class="ar-title">المسمى الوظيفي</td></tr>';
-            $html .= '</tbody></table>';
-            // Vertical divider
-            $html .= '<div class="vertical-divider"></div>';
-            // Hospital section
-            $html .= '<div class="group1-thq-hospitallogoandthename-elm">';
-            $html .= '<div class="placeholder-logo-hospital">' . $hospLogoHtml . '</div>';
-            $html .= '<span class="group1-thq-text-elm18">';
-            $html .= '<span style="font-family:\'Noto Sans Arabic\',sans-serif;font-weight:700">' . $hospNameAr . '</span><br/>';
-            $html .= '<span class="en-spaced" style="font-family:\'Times New Roman\',serif;font-weight:700">' . $hospNameEn . '</span><br/>';
-            if (!empty($licenseHtml)) $html .= $licenseHtml;
-            $html .= '</span></div>';
-            // Timestamp
-            $html .= '<div class="group1-thq-thedateofissueandalsotimeofissue-elm">';
-            $html .= '<span class="group1-thq-text-elm22">';
-            $html .= '<span>' . $timestampLine . '</span><br/>';
-            $html .= '<span>' . $dateLine . '</span>';
-            $html .= '</span></div>';
-            $html .= '</div></div></body></html>';
+            // Wrap reportBody in the container divs
+            $html .= '<div class="group1-container1"><div class="group1-thq-group1-elm" id="report-content">';
+            // Strip the outer report-page div from reportBody since we use group1-thq-group1-elm
+            $innerBody = $reportBody;
+            $innerBody = preg_replace('/^<div class="report-page">/', '', $innerBody);
+            $innerBody = preg_replace('/<\/div>$/', '', $innerBody);
+            $html .= $innerBody;
+            $html .= '</div></div>';
+            $html .= '</body></html>';
 
             echo $html;
             exit;
