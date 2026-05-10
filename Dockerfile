@@ -3,11 +3,14 @@ FROM php:8.2-apache
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# Install the docker-php-extension-installer (most reliable way to install PHP extensions)
+# Fix MPM conflict: disable event, keep prefork (default for mod_php)
+RUN a2dismod mpm_event 2>/dev/null; a2enmod mpm_prefork
+
+# Install the docker-php-extension-installer (most reliable way)
 ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
 RUN chmod +x /usr/local/bin/install-php-extensions
 
-# Install PHP extensions using the reliable installer
+# Install PHP extensions
 RUN install-php-extensions gd pdo_mysql mbstring zip
 
 # Install system tools needed for Composer
@@ -36,12 +39,14 @@ RUN mkdir -p /tmp/mpdf && chmod 777 /tmp/mpdf
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
 
-# Configure Apache to listen on PORT environment variable (Railway requirement)
-RUN sed -i 's/80/${PORT}/g' /etc/apache2/sites-available/000-default.conf /etc/apache2/ports.conf
+# Configure Apache to use PORT env variable at runtime (Railway sets PORT dynamically)
+RUN echo 'ServerName localhost\n' >> /etc/apache2/apache2.conf
+RUN sed -i 's/Listen 80/Listen ${PORT}/' /etc/apache2/ports.conf
+RUN sed -i 's/:80/:${PORT}/' /etc/apache2/sites-available/000-default.conf
 
-# PHP configuration for larger uploads and mPDF
+# PHP configuration
 RUN echo "upload_max_filesize = 20M\npost_max_size = 25M\nmemory_limit = 256M\nmax_execution_time = 120" > /usr/local/etc/php/conf.d/custom.ini
 
-EXPOSE ${PORT}
+EXPOSE 8080
 
 CMD ["apache2-foreground"]
