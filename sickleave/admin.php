@@ -8,7 +8,7 @@
  * 2. إضافة خاصية تغيير الطبيب في التعديل
  * 3. إضافة خاصية تكرار الإجازات
  * 4. إضافة نظام إدارة المستخدمين مع تسجيل الجلسات
- * 5.تحسينات عامة في الأداء والأمان
+ * 5. تحسينات عامة في الأداء والأمان
  */
 
 // تحميل مكتبات Composer (إن وجدت)
@@ -1116,7 +1116,13 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
         
         // Run WeasyPrint via Python script (with FontConfiguration for Google Fonts)
         $scriptPath = __DIR__ . '/generate_pdf.py';
-        $cmd = 'python3 "' . $scriptPath . '" "' . $tmpHtml . '" "' . $tmpPdf . '" 2>&1';
+        // Find the real python3 binary (avoid symlink loops)
+        $pythonBin = 'python3';
+        foreach (['/usr/bin/python3.13', '/usr/bin/python3.12', '/usr/bin/python3.11', '/usr/local/bin/python3', '/usr/bin/python3'] as $p) {
+            if (is_file($p) && !is_link($p)) { $pythonBin = $p; break; }
+            if (is_link($p)) { $real = realpath($p); if ($real && is_file($real)) { $pythonBin = $real; break; } }
+        }
+        $cmd = $pythonBin . ' "' . $scriptPath . '" "' . $tmpHtml . '" "' . $tmpPdf . '" 2>&1';
         $output = shell_exec($cmd);
         
         if (file_exists($tmpPdf) && filesize($tmpPdf) > 0) {
