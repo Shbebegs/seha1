@@ -27,7 +27,7 @@ header('Permissions-Policy: geolocation=(), microphone=(self), camera=()');
 // ======================== إعدادات قاعدة البيانات ========================
 $db_host = 'mysql.railway.internal';
 $db_user = 'root';
-$db_pass = 'ExvKbuJnGIvDATyXWCHtpjOFluFAgeqQ';
+$db_pass = 'xGnyGcxVAYSWwbRBSYpCDOwYkIvuTSbv';
 $db_name = 'railway';
 $db_port = 3306;
 
@@ -187,10 +187,7 @@ function ensureIndex(PDO $pdo, string $table, string $indexName, string $columns
     }
 }
 
-ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_deleted_created', 'deleted_at, created_at');
-ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_paid', 'is_paid');
-ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_patient', 'patient_id');
-ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_doctor', 'doctor_id');
+// ======================== إضافة كل الأعمدة أولاً ========================
 ensureColumn($pdo, 'sick_leaves', 'created_by_user_id', "INT NULL AFTER doctor_id");
 ensureColumn($pdo, 'sick_leaves', 'patient_name_en', "VARCHAR(200) NULL AFTER days_count");
 ensureColumn($pdo, 'sick_leaves', 'doctor_name_en', "VARCHAR(200) NULL AFTER patient_name_en");
@@ -198,13 +195,6 @@ ensureColumn($pdo, 'sick_leaves', 'doctor_title_en', "VARCHAR(200) NULL AFTER do
 ensureColumn($pdo, 'sick_leaves', 'hospital_name_ar', "VARCHAR(255) NULL AFTER doctor_title_en");
 ensureColumn($pdo, 'sick_leaves', 'hospital_name_en', "VARCHAR(255) NULL AFTER hospital_name_ar");
 ensureColumn($pdo, 'sick_leaves', 'logo_path', "VARCHAR(500) NULL AFTER hospital_name_en");
-ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_created_by_user', 'created_by_user_id');
-ensureIndex($pdo, 'notifications', 'idx_notifications_type_created', 'type, created_at');
-ensureIndex($pdo, 'notifications', 'idx_notifications_leave', 'leave_id');
-ensureIndex($pdo, 'leave_queries', 'idx_leave_queries_leave', 'leave_id');
-ensureIndex($pdo, 'leave_queries', 'idx_leave_queries_queried_at', 'queried_at');
-ensureIndex($pdo, 'patients', 'idx_patients_identity_number', 'identity_number');
-ensureIndex($pdo, 'patients', 'idx_patients_name', 'name');
 ensureColumn($pdo, 'patients', 'folder_link', "VARCHAR(500) NULL AFTER phone");
 
 // ======================== أعمدة جديدة للمستشفيات والأطباء والمرضى ========================
@@ -235,9 +225,21 @@ ensureColumn($pdo, 'sick_leaves', 'issue_period', "ENUM('AM','PM') NULL AFTER is
 ensureColumn($pdo, 'sick_leaves', 'employer_ar', "VARCHAR(200) NULL AFTER logo_path");
 ensureColumn($pdo, 'sick_leaves', 'employer_en', "VARCHAR(200) NULL AFTER employer_ar");
 
-ensureIndex($pdo, 'doctors', 'idx_doctors_name', 'name');
-ensureIndex($pdo, 'user_messages', 'idx_user_messages_pair_created', 'sender_id, receiver_id, created_at');
-ensureIndex($pdo, 'user_messages', 'idx_user_messages_receiver_read', 'receiver_id, is_read');
+// ======================== إنشاء الفهارس بعد التأكد من وجود كل الأعمدة ========================
+try { ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_deleted_created', 'deleted_at, created_at'); } catch(Exception $e) {}
+try { ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_paid', 'is_paid'); } catch(Exception $e) {}
+try { ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_patient', 'patient_id'); } catch(Exception $e) {}
+try { ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_doctor', 'doctor_id'); } catch(Exception $e) {}
+try { ensureIndex($pdo, 'sick_leaves', 'idx_sick_leaves_created_by_user', 'created_by_user_id'); } catch(Exception $e) {}
+try { ensureIndex($pdo, 'notifications', 'idx_notifications_type_created', 'type, created_at'); } catch(Exception $e) {}
+try { ensureIndex($pdo, 'notifications', 'idx_notifications_leave', 'leave_id'); } catch(Exception $e) {}
+try { ensureIndex($pdo, 'leave_queries', 'idx_leave_queries_leave', 'leave_id'); } catch(Exception $e) {}
+try { ensureIndex($pdo, 'leave_queries', 'idx_leave_queries_queried_at', 'queried_at'); } catch(Exception $e) {}
+try { ensureIndex($pdo, 'patients', 'idx_patients_identity_number', 'identity_number'); } catch(Exception $e) {}
+try { ensureIndex($pdo, 'patients', 'idx_patients_name', 'name'); } catch(Exception $e) {}
+try { ensureIndex($pdo, 'doctors', 'idx_doctors_name', 'name'); } catch(Exception $e) {}
+try { ensureIndex($pdo, 'user_messages', 'idx_user_messages_pair_created', 'sender_id, receiver_id, created_at'); } catch(Exception $e) {}
+try { ensureIndex($pdo, 'user_messages', 'idx_user_messages_receiver_read', 'receiver_id, is_read'); } catch(Exception $e) {}
 ensureColumn($pdo, 'user_messages', 'message_type', "ENUM('text','image','file','voice') DEFAULT 'text' AFTER message_text");
 ensureColumn($pdo, 'user_messages', 'file_name', "VARCHAR(255) NULL AFTER message_type");
 ensureColumn($pdo, 'user_messages', 'file_path', "VARCHAR(500) NULL AFTER file_name");
@@ -247,9 +249,9 @@ ensureColumn($pdo, 'user_messages', 'deleted_at', "DATETIME NULL AFTER is_read")
 ensureColumn($pdo, 'user_messages', 'reply_to_id', "INT NULL AFTER deleted_at");
 ensureColumn($pdo, 'user_messages', 'chat_scope', "ENUM('private','global') DEFAULT 'private' AFTER reply_to_id");
 ensureColumn($pdo, 'user_messages', 'broadcast_group_id', "VARCHAR(50) NULL AFTER chat_scope");
-ensureIndex($pdo, 'user_messages', 'idx_user_messages_scope_created', 'chat_scope, created_at');
-ensureIndex($pdo, 'user_messages', 'idx_user_messages_broadcast', 'broadcast_group_id');
-ensureIndex($pdo, 'user_messages', 'idx_user_messages_deleted', 'deleted_at');
+try { ensureIndex($pdo, 'user_messages', 'idx_user_messages_scope_created', 'chat_scope, created_at'); } catch(Exception $e) {}
+try { ensureIndex($pdo, 'user_messages', 'idx_user_messages_broadcast', 'broadcast_group_id'); } catch(Exception $e) {}
+try { ensureIndex($pdo, 'user_messages', 'idx_user_messages_deleted', 'deleted_at'); } catch(Exception $e) {}
 
 // إنشاء مستخدم افتراضي إذا لم يوجد أي مستخدم
 $stmt = $pdo->query("SELECT COUNT(*) as cnt FROM admin_users");
