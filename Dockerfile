@@ -24,14 +24,16 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy composer files first (for Docker cache optimization)
-COPY composer.json ./
-
-# Install PHP dependencies (mPDF)
-RUN composer install --no-dev --optimize-autoloader --no-interaction
-
-# Copy all project files
+# Copy all project files first
 COPY . .
+
+# Install PHP dependencies (mPDF) in BOTH root and sickleave directory
+RUN if [ -f /var/www/html/composer.json ]; then \
+        cd /var/www/html && composer install --no-dev --optimize-autoloader --no-interaction; \
+    fi && \
+    if [ -f /var/www/html/sickleave/composer.json ]; then \
+        cd /var/www/html/sickleave && composer install --no-dev --optimize-autoloader --no-interaction; \
+    fi
 
 # Create temp directory for mPDF with proper permissions
 RUN mkdir -p /tmp/mpdf && chmod 777 /tmp/mpdf
@@ -45,23 +47,8 @@ RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 # PHP configuration
 RUN printf "upload_max_filesize = 20M\npost_max_size = 25M\nmemory_limit = 256M\nmax_execution_time = 120\n" > /usr/local/etc/php/conf.d/custom.ini
 
-# Create startup script that sets the actual PORT value at runtime
-RUN printf '#!/bin/bash\n\
-set -e\n\
-# Railway provides PORT env var - default to 8080 if not set\n\
-LISTEN_PORT="${PORT:-8080}"\n\
-\n\
-# Fix MPM at runtime\n\
-a2dismod mpm_event 2>/dev/null || true\n\
-a2dismod mpm_worker 2>/dev/null || true\n\
-a2enmod mpm_prefork 2>/dev/null || true\n\
-\n\
-# Write the actual port number into Apache config (not env var reference)\n\
-echo "Listen ${LISTEN_PORT}" > /etc/apache2/ports.conf\n\
-sed -i "s/<VirtualHost \\*:[0-9]*>/<VirtualHost *:${LISTEN_PORT}>/" /etc/apache2/sites-available/000-default.conf\n\
-\n\
-echo "Starting Apache on port ${LISTEN_PORT}"\n\
-exec apache2-foreground\n' > /usr/local/bin/start.sh \
+# Create startup script
+RUN printf '#!/bin/bash\nset -e\nLISTEN_PORT="${PORT:-8080}"\na2dismod mpm_event 2>/dev/null || true\na2dismod mpm_worker 2>/dev/null || true\na2enmod mpm_prefork 2>/dev/null || true\necho "Listen ${LISTEN_PORT}" > /etc/apache2/ports.conf\nsed -i "s/<VirtualHost \\*:[0-9]*>/<VirtualHost *:${LISTEN_PORT}>/" /etc/apache2/sites-available/000-default.conf\necho "Starting Apache on port ${LISTEN_PORT}"\nexec apache2-foreground\n' > /usr/local/bin/start.sh \
     && chmod +x /usr/local/bin/start.sh
 
 EXPOSE 8080
