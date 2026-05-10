@@ -1047,15 +1047,25 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
         $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']) . '/';
         
         $pdfHtml = '<!DOCTYPE html><html lang="ar"><head><meta charset="utf-8"/>';
-        $pdfHtml .= '<style>';
-        $pdfHtml .= '@page { size: 842.25px 1190.25px; margin: 0; }';
+        $pdfHtml .= '<title>Sick Leave Report</title>';
+        // Google Fonts for WeasyPrint
+        $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap" />';
+        $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap" />';
+        $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap" />';
+        $pdfHtml .= '<style data-tag="reset-style-sheet">';
         $pdfHtml .= 'html { line-height: 1.15; } body { margin: 0; }';
-        $pdfHtml .= '* { box-sizing: border-box; border-width: 0; border-style: solid; -webkit-font-smoothing: antialiased; }';
+        $pdfHtml .= '* { box-sizing: border-box; border-width: 0; border-style: solid; }';
         $pdfHtml .= 'p, li, ul, pre, div, h1, h2, h3, h4, h5, h6, figure, blockquote, figcaption { margin: 0; padding: 0; }';
         $pdfHtml .= 'a { color: inherit; text-decoration: inherit; }';
-        $pdfHtml .= 'html { font-family: "Noto Sans", "Noto Sans Arabic", Inter, sans-serif; font-size: 16px; }';
-        $pdfHtml .= 'body { font-weight: 400; color: #191818; background: white; }';
-        $pdfHtml .= '.report-page { width: 842.25px; height: 1190.25px; position: relative; background-color: white; overflow: hidden; }';
+        $pdfHtml .= '</style>';
+        $pdfHtml .= '<style data-tag="default-style-sheet">';
+        $pdfHtml .= 'html { font-family: Inter, sans-serif; font-size: 16px; }';
+        $pdfHtml .= 'body { font-weight: 400; color: #191818; background: #ffffff; }';
+        $pdfHtml .= '</style>';
+        $pdfHtml .= '<style>';
+        $pdfHtml .= '@page { size: A4; margin: 0; }';
+        $pdfHtml .= '.group1-container1 { width: 100%; display: flex; align-items: center; flex-direction: column; background-color: transparent; }';
+        $pdfHtml .= '.group1-thq-group1-elm { width: 842.25px; height: 1190.25px; display: flex; position: relative; align-items: flex-start; background-color: white; }';
         $pdfHtml .= '.info-table { position: absolute; top: 242px; left: 36px; width: 770px; border-collapse: separate; border-spacing: 0; border: 1px solid #cccccc; border-radius: 8px; overflow: hidden; background-color: transparent; z-index: 10; }';
         $pdfHtml .= '.info-table td { border-bottom: 1px solid #cccccc; border-right: 1px solid #cccccc; height: 42px; text-align: center; vertical-align: middle; padding: 4px 8px; }';
         $pdfHtml .= '.info-table td:last-child { border-right: none; } .info-table tr:last-child td { border-bottom: none; }';
@@ -1087,7 +1097,7 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
         $pdfHtml .= '.group1-thq-text-elm40 { top: calc(798.91px + var(--footer-offset)); left: 108.35px; color: rgba(20, 0, 255, 1); position: absolute; font-size: 11px; font-weight: 700; text-align: left; text-decoration: underline; font-family: "Times New Roman", serif; }';
         $pdfHtml .= '.placeholder-136 { position: absolute; top: 620px; left: 122px; width: 136px; height: 136px; display: flex; align-items: center; justify-content: center; }';
         $pdfHtml .= '.vertical-divider { position: absolute; top: 735px; left: 436px; width: 1px; height: 7cm; background-color: #dddddd; }';
-        $pdfHtml .= '.thin-slash { font-weight: 300; font-family: "Noto Sans", sans-serif; margin: 0 3px; display: inline-block; }';
+        $pdfHtml .= '.thin-slash { font-weight: 300; font-family: "Inter", sans-serif; margin: 0 3px; display: inline-block; }';
         $pdfHtml .= '</style></head><body>';
         
         // Replace relative SVG paths with absolute URLs
@@ -1104,8 +1114,9 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
         $tmpPdf = '/tmp/weasyprint/report_' . uniqid() . '.pdf';
         file_put_contents($tmpHtml, $pdfHtml);
         
-        // Run WeasyPrint
-        $cmd = 'weasyprint "' . $tmpHtml . '" "' . $tmpPdf . '" 2>&1';
+        // Run WeasyPrint via Python script (with FontConfiguration for Google Fonts)
+        $scriptPath = __DIR__ . '/generate_pdf.py';
+        $cmd = 'python3 "' . $scriptPath . '" "' . $tmpHtml . '" "' . $tmpPdf . '" 2>&1';
         $output = shell_exec($cmd);
         
         if (file_exists($tmpPdf) && filesize($tmpPdf) > 0) {
