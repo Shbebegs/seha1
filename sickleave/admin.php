@@ -1098,7 +1098,6 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
                     'marginLeft' => 0.0,
                     'marginRight' => 0.0,
                     'preferCSSPageSize' => true,
-                    'timeout' => 60000,
                 ]);
                 
                 $browser->close();
