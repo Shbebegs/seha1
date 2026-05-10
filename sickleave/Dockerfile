@@ -1,5 +1,5 @@
 FROM php:8.2-apache
-# force rebuild v2
+
 # Install the docker-php-extension-installer
 ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
 RUN chmod +x /usr/local/bin/install-php-extensions
@@ -35,10 +35,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && pip3 install --no-cache-dir --break-system-packages weasyprint \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Verify WeasyPrint works and create symlinks so Apache/PHP can find them
+# Verify WeasyPrint works and find real paths for python3/weasyprint
+# Remove any existing symlinks first to avoid loops, then create fresh ones
 RUN weasyprint --version && \
-    ln -sf $(which python3) /usr/bin/python3 && \
-    ln -sf $(which weasyprint) /usr/bin/weasyprint
+    rm -f /usr/bin/python3 2>/dev/null; \
+    REAL_PYTHON=$(readlink -f $(which python3.11 || which python3.12 || which python3)) && \
+    ln -sf "$REAL_PYTHON" /usr/bin/python3 && \
+    REAL_WEASY=$(readlink -f $(which weasyprint)) && \
+    ln -sf "$REAL_WEASY" /usr/bin/weasyprint && \
+    echo "python3 -> $REAL_PYTHON" && echo "weasyprint -> $REAL_WEASY"
 
 # Ensure PATH includes pip install location for Apache subprocess
 ENV PATH="/usr/local/bin:/usr/bin:/bin:${PATH}"
