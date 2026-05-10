@@ -688,8 +688,8 @@ function fetchAllData($pdo) {
     purgeExpiredMessages($pdo);
     // الإجازات النشطة
     $leaves = $pdo->query(" 
-        SELECT sl.*, p.name AS patient_name, p.identity_number, p.phone AS patient_phone, p.folder_link AS patient_folder_link,
-               d.name AS doctor_name, d.title AS doctor_title, d.note AS doctor_note,
+        SELECT sl.*, COALESCE(p.name_ar, p.name, '') AS patient_name, p.identity_number, p.phone AS patient_phone, p.folder_link AS patient_folder_link,
+               COALESCE(d.name_ar, d.name, '') AS doctor_name, COALESCE(d.title_ar, d.title, '') AS doctor_title, d.note AS doctor_note,
                COALESCE(lq.queries_count, 0) AS queries_count
         FROM sick_leaves sl
         LEFT JOIN patients p ON sl.patient_id = p.id
@@ -705,8 +705,8 @@ function fetchAllData($pdo) {
 
     // الإجازات المؤرشفة
     $archived = $pdo->query(" 
-        SELECT sl.*, p.name AS patient_name, p.identity_number, p.phone AS patient_phone, p.folder_link AS patient_folder_link,
-               d.name AS doctor_name, d.title AS doctor_title, d.note AS doctor_note,
+        SELECT sl.*, COALESCE(p.name_ar, p.name, '') AS patient_name, p.identity_number, p.phone AS patient_phone, p.folder_link AS patient_folder_link,
+               COALESCE(d.name_ar, d.name, '') AS doctor_name, COALESCE(d.title_ar, d.title, '') AS doctor_title, d.note AS doctor_note,
                COALESCE(lq.queries_count, 0) AS queries_count
         FROM sick_leaves sl
         LEFT JOIN patients p ON sl.patient_id = p.id
@@ -723,7 +723,7 @@ function fetchAllData($pdo) {
     // سجل الاستعلامات
     $queries = $pdo->query("
         SELECT lq.id AS qid, lq.leave_id, lq.queried_at, lq.source,
-               sl.service_code, p.name AS patient_name, p.identity_number
+               sl.service_code, COALESCE(p.name_ar, p.name, '') AS patient_name, p.identity_number
         FROM leave_queries lq
         LEFT JOIN sick_leaves sl ON lq.leave_id = sl.id
         LEFT JOIN patients p ON sl.patient_id = p.id
@@ -732,7 +732,7 @@ function fetchAllData($pdo) {
 
     // إشعارات المدفوعات
     $notifications_payment = $pdo->query("
-        SELECT n.*, sl.payment_amount, sl.service_code, sl.patient_id, p.name AS patient_name, p.phone AS patient_phone
+        SELECT n.*, sl.payment_amount, sl.service_code, sl.patient_id, COALESCE(p.name_ar, p.name, '') AS patient_name, p.phone AS patient_phone
         FROM notifications n
         LEFT JOIN sick_leaves sl ON n.leave_id = sl.id
         LEFT JOIN patients p ON sl.patient_id = p.id
@@ -742,7 +742,7 @@ function fetchAllData($pdo) {
 
     // المدفوعات لكل مريض
     $payments = $pdo->query("
-        SELECT p.id, p.name,
+        SELECT p.id, COALESCE(p.name_ar, p.name, '') AS name,
                COUNT(sl.id) AS total,
                SUM(CASE WHEN sl.is_paid = 1 THEN 1 ELSE 0 END) AS paid_count,
                SUM(CASE WHEN sl.is_paid = 0 THEN 1 ELSE 0 END) AS unpaid_count,
@@ -750,8 +750,8 @@ function fetchAllData($pdo) {
                COALESCE(SUM(CASE WHEN sl.is_paid = 0 THEN sl.payment_amount ELSE 0 END), 0) AS unpaid_amount
         FROM patients p
         LEFT JOIN sick_leaves sl ON p.id = sl.patient_id AND sl.deleted_at IS NULL
-        GROUP BY p.id, p.name
-        ORDER BY p.name
+        GROUP BY p.id, COALESCE(p.name_ar, p.name, '')
+        ORDER BY COALESCE(p.name_ar, p.name, '')
     ")->fetchAll();
 
     // المستشفيات
@@ -765,8 +765,8 @@ function fetchActiveOperationalData($pdo) {
     ensureDelayedUnpaidNotifications($pdo);
     purgeExpiredMessages($pdo);
     $leaves = $pdo->query(" 
-        SELECT sl.*, p.name AS patient_name, p.identity_number, p.phone AS patient_phone, p.folder_link AS patient_folder_link,
-               d.name AS doctor_name, d.title AS doctor_title, d.note AS doctor_note,
+        SELECT sl.*, COALESCE(p.name_ar, p.name, '') AS patient_name, p.identity_number, p.phone AS patient_phone, p.folder_link AS patient_folder_link,
+               COALESCE(d.name_ar, d.name, '') AS doctor_name, COALESCE(d.title_ar, d.title, '') AS doctor_title, d.note AS doctor_note,
                COALESCE(lq.queries_count, 0) AS queries_count
         FROM sick_leaves sl
         LEFT JOIN patients p ON sl.patient_id = p.id
@@ -781,7 +781,7 @@ function fetchActiveOperationalData($pdo) {
     ")->fetchAll();
 
     $notifications_payment = $pdo->query(" 
-        SELECT n.*, sl.payment_amount, sl.service_code, sl.patient_id, p.name AS patient_name, p.phone AS patient_phone
+        SELECT n.*, sl.payment_amount, sl.service_code, sl.patient_id, COALESCE(p.name_ar, p.name, '') AS patient_name, p.phone AS patient_phone
         FROM notifications n
         LEFT JOIN sick_leaves sl ON n.leave_id = sl.id
         LEFT JOIN patients p ON sl.patient_id = p.id
@@ -790,7 +790,7 @@ function fetchActiveOperationalData($pdo) {
     ")->fetchAll();
 
     $payments = $pdo->query(" 
-        SELECT p.id, p.name,
+        SELECT p.id, COALESCE(p.name_ar, p.name, '') AS name,
                COUNT(sl.id) AS total,
                SUM(CASE WHEN sl.is_paid = 1 THEN 1 ELSE 0 END) AS paid_count,
                SUM(CASE WHEN sl.is_paid = 0 THEN 1 ELSE 0 END) AS unpaid_count,
@@ -798,8 +798,8 @@ function fetchActiveOperationalData($pdo) {
                COALESCE(SUM(CASE WHEN sl.is_paid = 0 THEN sl.payment_amount ELSE 0 END), 0) AS unpaid_amount
         FROM patients p
         LEFT JOIN sick_leaves sl ON p.id = sl.patient_id AND sl.deleted_at IS NULL
-        GROUP BY p.id, p.name
-        ORDER BY p.name
+        GROUP BY p.id, COALESCE(p.name_ar, p.name, '')
+        ORDER BY COALESCE(p.name_ar, p.name, '')
     ")->fetchAll();
 
     return compact('leaves', 'payments', 'notifications_payment');
@@ -916,8 +916,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
     switch ($action) {
         case 'fetch_all_leaves':
             $data = fetchAllData($pdo);
-            $data['doctors'] = $pdo->query("SELECT d.*, h.name_ar AS hospital_name_ar FROM doctors d LEFT JOIN hospitals h ON d.hospital_id = h.id ORDER BY d.name")->fetchAll();
-            $data['patients'] = $pdo->query("SELECT * FROM patients ORDER BY name")->fetchAll();
+            $data['doctors'] = $pdo->query("SELECT d.*, h.name_ar AS hospital_name_ar FROM doctors d LEFT JOIN hospitals h ON d.hospital_id = h.id ORDER BY COALESCE(d.name_ar, d.name, '')")->fetchAll();
+            $data['patients'] = $pdo->query("SELECT * FROM patients ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
             $data['hospitals'] = $pdo->query("SELECT * FROM hospitals ORDER BY name_ar")->fetchAll();
             $data['stats'] = getStats($pdo);
             $data['unread_messages_count'] = getUnreadMessagesCount($pdo, intval($_SESSION['admin_user_id'] ?? 0));
@@ -978,10 +978,10 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
         case 'get_doctors_by_hospital':
             $hid = intval($_POST['hospital_id'] ?? 0);
             if ($hid > 0) {
-                $stmt = $pdo->prepare("SELECT * FROM doctors WHERE hospital_id = ? ORDER BY name");
+                $stmt = $pdo->prepare("SELECT * FROM doctors WHERE hospital_id = ? ORDER BY COALESCE(name_ar, name, '')");
                 $stmt->execute([$hid]);
             } else {
-                $stmt = $pdo->query("SELECT * FROM doctors ORDER BY name");
+                $stmt = $pdo->query("SELECT * FROM doctors ORDER BY COALESCE(name_ar, name, '')");
             }
             echo json_encode(['success'=>true,'doctors'=>$stmt->fetchAll()]);
             break;
@@ -1019,8 +1019,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
                 if ($existing) {
                     $patient_id = $existing['id'];
                 } else {
-                    $stmt = $pdo->prepare("INSERT INTO patients (name, identity_number, phone, folder_link) VALUES (?, ?, ?, ?)");
-                    $stmt->execute([$pName, $pIdentity, $pPhone, $pFolderLink]);
+                    $stmt = $pdo->prepare("INSERT INTO patients (name, name_ar, identity_number, phone, folder_link) VALUES (?, ?, ?, ?, ?)");
+                    $stmt->execute([$pName, $pName, $pIdentity, $pPhone, $pFolderLink]);
                     $patient_id = $pdo->lastInsertId();
                 }
             } else {
@@ -1037,8 +1037,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
                     echo json_encode(['success' => false, 'message' => 'يرجى إدخال اسم الطبيب ومسمّاه الوظيفي.']);
                     exit;
                 }
-                $stmt = $pdo->prepare("INSERT INTO doctors (name, title, note) VALUES (?, ?, ?)");
-                $stmt->execute([$dName, $dTitle, $dNote]);
+                $stmt = $pdo->prepare("INSERT INTO doctors (name, name_ar, title, title_ar, note) VALUES (?, ?, ?, ?, ?)");
+                $stmt->execute([$dName, $dName, $dTitle, $dTitle, $dNote]);
                 $doctor_id = $pdo->lastInsertId();
             } else {
                 $doctor_id = intval($doctor_select);
@@ -1117,8 +1117,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             }
 
             $data = fetchActiveOperationalData($pdo);
-            $data['doctors'] = $pdo->query("SELECT * FROM doctors ORDER BY name")->fetchAll();
-            $data['patients'] = $pdo->query("SELECT * FROM patients ORDER BY name")->fetchAll();
+            $data['doctors'] = $pdo->query("SELECT * FROM doctors ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
+            $data['patients'] = $pdo->query("SELECT * FROM patients ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
             $data['stats'] = getStats($pdo);
             $data['success'] = true;
             $data['message'] = "تمت إضافة الإجازة بنجاح. رمز الخدمة: $service_code";
@@ -1150,8 +1150,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
                     echo json_encode(['success' => false, 'message' => 'يرجى إدخال اسم الطبيب ومسمّاه الوظيفي.']);
                     exit;
                 }
-                $stmt = $pdo->prepare("INSERT INTO doctors (name, title, note) VALUES (?, ?, ?)");
-                $stmt->execute([$dName, $dTitle, $dNote]);
+                $stmt = $pdo->prepare("INSERT INTO doctors (name, name_ar, title, title_ar, note) VALUES (?, ?, ?, ?, ?)");
+                $stmt->execute([$dName, $dName, $dTitle, $dTitle, $dNote]);
                 $doctor_id_edit = intval($pdo->lastInsertId());
             } else {
                 $doctor_id_edit = intval($doctor_id_edit_raw ?: 0);
@@ -1187,8 +1187,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             }
 
             $data = fetchActiveOperationalData($pdo);
-            $data['doctors'] = $pdo->query("SELECT * FROM doctors ORDER BY name")->fetchAll();
-            $data['patients'] = $pdo->query("SELECT * FROM patients ORDER BY name")->fetchAll();
+            $data['doctors'] = $pdo->query("SELECT * FROM doctors ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
+            $data['patients'] = $pdo->query("SELECT * FROM patients ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
             $data['stats'] = getStats($pdo);
             $data['success'] = true;
             $data['message'] = 'تم تعديل الإجازة بنجاح.';
@@ -1209,8 +1209,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
                     echo json_encode(['success' => false, 'message' => 'يرجى إدخال اسم الطبيب ومسمّاه الوظيفي.']);
                     exit;
                 }
-                $stmt = $pdo->prepare("INSERT INTO doctors (name, title, note) VALUES (?, ?, ?)");
-                $stmt->execute([$dName, $dTitle, $dNote]);
+                $stmt = $pdo->prepare("INSERT INTO doctors (name, name_ar, title, title_ar, note) VALUES (?, ?, ?, ?, ?)");
+                $stmt->execute([$dName, $dName, $dTitle, $dTitle, $dNote]);
                 $doctor_id = $pdo->lastInsertId();
             } else {
                 $doctor_id = intval($doctor_select);
@@ -1270,8 +1270,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             }
 
             $data = fetchActiveOperationalData($pdo);
-            $data['doctors'] = $pdo->query("SELECT * FROM doctors ORDER BY name")->fetchAll();
-            $data['patients'] = $pdo->query("SELECT * FROM patients ORDER BY name")->fetchAll();
+            $data['doctors'] = $pdo->query("SELECT * FROM doctors ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
+            $data['patients'] = $pdo->query("SELECT * FROM patients ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
             $data['stats'] = getStats($pdo);
             $data['success'] = true;
             $data['message'] = "تم تكرار الإجازة بنجاح. رمز الخدمة الجديد: $service_code";
@@ -1335,8 +1335,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $stmt->execute([$amount, $leave_id]);
             $pdo->prepare("DELETE FROM notifications WHERE leave_id = ? AND type = 'payment'")->execute([$leave_id]);
             $data = fetchActiveOperationalData($pdo);
-            $data['doctors'] = $pdo->query("SELECT * FROM doctors ORDER BY name")->fetchAll();
-            $data['patients'] = $pdo->query("SELECT * FROM patients ORDER BY name")->fetchAll();
+            $data['doctors'] = $pdo->query("SELECT * FROM doctors ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
+            $data['patients'] = $pdo->query("SELECT * FROM patients ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
             $data['stats'] = getStats($pdo);
             $data['success'] = true;
             $data['message'] = 'تم تأكيد الدفع بنجاح.';
@@ -1366,7 +1366,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $doctor = $pdo->prepare("SELECT * FROM doctors WHERE id = ?");
             $doctor->execute([$doctorId]);
             $doctorData = $doctor->fetch();
-            $doctors = $pdo->query("SELECT * FROM doctors ORDER BY name")->fetchAll();
+            $doctors = $pdo->query("SELECT * FROM doctors ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
             echo json_encode([
                 'success' => true,
                 'message' => 'تمت إضافة الطبيب بنجاح.',
@@ -1387,8 +1387,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
                 exit;
             }
 
-            $checkStmt = $pdo->prepare("SELECT id, note FROM doctors WHERE name = ? AND title = ? LIMIT 1");
-            $insertStmt = $pdo->prepare("INSERT INTO doctors (name, title, note) VALUES (?, ?, ?)");
+            $checkStmt = $pdo->prepare("SELECT id, note FROM doctors WHERE (name_ar = ? OR name = ?) AND (title_ar = ? OR title = ?) LIMIT 1");
+            $insertStmt = $pdo->prepare("INSERT INTO doctors (name, name_ar, title, title_ar, note) VALUES (?, ?, ?, ?, ?)");
             $updateNoteStmt = $pdo->prepare("UPDATE doctors SET note = ? WHERE id = ?");
 
             $inserted = 0;
@@ -1405,7 +1405,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
                     continue;
                 }
 
-                $checkStmt->execute([$name, $title]);
+                $checkStmt->execute([$name, $name, $title, $title]);
                 $existing = $checkStmt->fetch();
                 if ($existing) {
                     if ($note !== '' && trim((string)($existing['note'] ?? '')) !== $note) {
@@ -1417,11 +1417,11 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
                     continue;
                 }
 
-                $insertStmt->execute([$name, $title, $note]);
+                $insertStmt->execute([$name, $name, $title, $title, $note]);
                 $inserted++;
             }
 
-            $doctors = $pdo->query("SELECT * FROM doctors ORDER BY name")->fetchAll();
+            $doctors = $pdo->query("SELECT * FROM doctors ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
             $summaryMessage = "تمت معالجة الدفعة بنجاح: أضيف {$inserted}، تحدّث {$updated}، مكرّر {$duplicates}.";
             if (!empty($errors)) {
                 $summaryMessage .= " أخطاء: " . implode(' | ', array_slice($errors, 0, 3));
@@ -1463,7 +1463,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $doctor = $pdo->prepare("SELECT * FROM doctors WHERE id = ?");
             $doctor->execute([$id]);
             $doctorData = $doctor->fetch();
-            $doctors = $pdo->query("SELECT * FROM doctors ORDER BY name")->fetchAll();
+            $doctors = $pdo->query("SELECT * FROM doctors ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
             echo json_encode([
                 'success' => true,
                 'message' => 'تم تعديل الطبيب بنجاح.',
@@ -1476,7 +1476,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
         case 'delete_doctor':
             $id = intval($_POST['doctor_id'] ?? 0);
             $pdo->prepare("DELETE FROM doctors WHERE id = ?")->execute([$id]);
-            $doctors = $pdo->query("SELECT * FROM doctors ORDER BY name")->fetchAll();
+            $doctors = $pdo->query("SELECT * FROM doctors ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
             echo json_encode([
                 'success' => true,
                 'message' => 'تم حذف الطبيب بنجاح.',
@@ -1507,7 +1507,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $patient = $pdo->prepare("SELECT * FROM patients WHERE id = ?");
             $patient->execute([$patientId]);
             $patientData = $patient->fetch();
-            $patients = $pdo->query("SELECT * FROM patients ORDER BY name")->fetchAll();
+            $patients = $pdo->query("SELECT * FROM patients ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
             echo json_encode([
                 'success' => true,
                 'message' => 'تمت إضافة المريض بنجاح.',
@@ -1539,7 +1539,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $patient = $pdo->prepare("SELECT * FROM patients WHERE id = ?");
             $patient->execute([$id]);
             $patientData = $patient->fetch();
-            $patients = $pdo->query("SELECT * FROM patients ORDER BY name")->fetchAll();
+            $patients = $pdo->query("SELECT * FROM patients ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
             echo json_encode([
                 'success' => true,
                 'message' => 'تم تعديل المريض بنجاح.',
@@ -1552,7 +1552,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
         case 'delete_patient':
             $id = intval($_POST['patient_id'] ?? 0);
             $pdo->prepare("DELETE FROM patients WHERE id = ?")->execute([$id]);
-            $patients = $pdo->query("SELECT * FROM patients ORDER BY name")->fetchAll();
+            $patients = $pdo->query("SELECT * FROM patients ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
             echo json_encode([
                 'success' => true,
                 'message' => 'تم حذف المريض بنجاح.',
@@ -1693,11 +1693,11 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $consistencyStmt->execute(array_merge([$toDate, $fromDate], $rangeParams));
             $summary['consistency_rate'] = round((float)$consistencyStmt->fetchColumn(), 2);
 
-            $topDoctorsStmt = $pdo->prepare("SELECT d.name, d.title, COUNT(*) leaves_count FROM sick_leaves sl LEFT JOIN doctors d ON d.id = sl.doctor_id WHERE $rangeFilter GROUP BY sl.doctor_id ORDER BY leaves_count DESC LIMIT 5");
+            $topDoctorsStmt = $pdo->prepare("SELECT COALESCE(d.name_ar, d.name, '') AS name, COALESCE(d.title_ar, d.title, '') AS title, COUNT(*) leaves_count FROM sick_leaves sl LEFT JOIN doctors d ON d.id = sl.doctor_id WHERE $rangeFilter GROUP BY sl.doctor_id ORDER BY leaves_count DESC LIMIT 5");
             $topDoctorsStmt->execute($rangeParams);
             $summary['top_doctors'] = $topDoctorsStmt->fetchAll();
 
-            $topPatientsStmt = $pdo->prepare("SELECT p.name, p.identity_number, COUNT(*) leaves_count, SUM(CASE WHEN sl.is_paid = 1 THEN sl.payment_amount ELSE 0 END) paid_amount, SUM(CASE WHEN sl.is_paid = 0 THEN sl.payment_amount ELSE 0 END) unpaid_amount FROM sick_leaves sl LEFT JOIN patients p ON p.id = sl.patient_id WHERE $rangeFilter GROUP BY sl.patient_id ORDER BY leaves_count DESC LIMIT 5");
+            $topPatientsStmt = $pdo->prepare("SELECT COALESCE(p.name_ar, p.name, '') AS name, p.identity_number, COUNT(*) leaves_count, SUM(CASE WHEN sl.is_paid = 1 THEN sl.payment_amount ELSE 0 END) paid_amount, SUM(CASE WHEN sl.is_paid = 0 THEN sl.payment_amount ELSE 0 END) unpaid_amount FROM sick_leaves sl LEFT JOIN patients p ON p.id = sl.patient_id WHERE $rangeFilter GROUP BY sl.patient_id ORDER BY leaves_count DESC LIMIT 5");
             $topPatientsStmt->execute($rangeParams);
             $summary['top_patients'] = $topPatientsStmt->fetchAll();
 
@@ -1732,7 +1732,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
                 LEFT JOIN patients p ON p.id = sl.patient_id
                 LEFT JOIN admin_users u ON u.id = sl.created_by_user_id
                 WHERE $rangeFilter
-                GROUP BY sl.patient_id, sl.start_date, sl.end_date, p.name, p.identity_number
+                GROUP BY sl.patient_id, sl.start_date, sl.end_date, COALESCE(p.name_ar, p.name, ''), p.identity_number
                 HAVING COUNT(*) > 1
                 ORDER BY repeated_count DESC, sl.start_date DESC
                 LIMIT 50
@@ -1786,12 +1786,12 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             break;
 
         case 'fetch_doctors':
-            $doctors = $pdo->query("SELECT * FROM doctors ORDER BY name")->fetchAll();
+            $doctors = $pdo->query("SELECT * FROM doctors ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
             echo json_encode(['success' => true, 'doctors' => $doctors, 'stats' => getStats($pdo)]);
             break;
 
         case 'fetch_patients':
-            $patients = $pdo->query("SELECT * FROM patients ORDER BY name")->fetchAll();
+            $patients = $pdo->query("SELECT * FROM patients ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
             echo json_encode(['success' => true, 'patients' => $patients, 'stats' => getStats($pdo)]);
             break;
 
@@ -2503,8 +2503,8 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
 $loggedIn = is_logged_in();
 
 if ($loggedIn) {
-    $doctors = $pdo->query("SELECT d.*, h.name_ar AS hospital_name_ar FROM doctors d LEFT JOIN hospitals h ON d.hospital_id = h.id ORDER BY d.name")->fetchAll();
-    $patients = $pdo->query("SELECT * FROM patients ORDER BY name")->fetchAll();
+    $doctors = $pdo->query("SELECT d.*, h.name_ar AS hospital_name_ar FROM doctors d LEFT JOIN hospitals h ON d.hospital_id = h.id ORDER BY COALESCE(d.name_ar, d.name, '')")->fetchAll();
+    $patients = $pdo->query("SELECT * FROM patients ORDER BY COALESCE(name_ar, name, '')")->fetchAll();
     $hospitals = $pdo->query("SELECT * FROM hospitals ORDER BY name_ar")->fetchAll();
     
     $data = fetchAllData($pdo);
@@ -6193,7 +6193,7 @@ function generatePaymentPatientRow(p) {
     return `
         <tr data-id="${p.id}">
             <td class="row-num"></td>
-            <td>${htmlspecialchars(p.name)}</td>
+            <td>${htmlspecialchars(p.name_ar || p.name || '')}</td>
             <td>${p.total}</td>
             <td>${p.paid_count}</td>
             <td>${p.unpaid_count}</td>
@@ -6387,11 +6387,11 @@ function renderAdminStats(data) {
     `).join('') || '<tr><td colspan="4" class="text-muted">لا توجد بيانات</td></tr>';
 
     topDoctors.innerHTML = (data.top_doctors || []).map(d => `
-        <li class="list-group-item d-flex justify-content-between"><span>${htmlspecialchars(d.name || 'غير محدد')} <small class="text-muted">${htmlspecialchars(d.title || '')}</small></span><strong>${d.leaves_count || 0}</strong></li>
+        <li class="list-group-item d-flex justify-content-between"><span>${htmlspecialchars(d.name_ar || d.name || 'غير محدد')} <small class="text-muted">${htmlspecialchars(d.title_ar || d.title || '')}</small></span><strong>${d.leaves_count || 0}</strong></li>
     `).join('') || '<li class="list-group-item text-muted">لا توجد بيانات</li>';
 
     topPatients.innerHTML = (data.top_patients || []).map(p => `
-        <li class="list-group-item"><div class="d-flex justify-content-between"><span>${htmlspecialchars(p.name || 'غير محدد')} (${htmlspecialchars(p.identity_number || '-')})</span><strong>${p.leaves_count || 0}</strong></div>${canViewFinancial ? `<small class="text-success">مدفوع: ${parseFloat(p.paid_amount || 0).toFixed(2)}</small> - <small class="text-danger">مستحق: ${parseFloat(p.unpaid_amount || 0).toFixed(2)}</small>` : '<small class="text-muted">البيانات المالية للمشرف فقط</small>'}</li>
+        <li class="list-group-item"><div class="d-flex justify-content-between"><span>${htmlspecialchars(p.name_ar || p.name || 'غير محدد')} (${htmlspecialchars(p.identity_number || '-')})</span><strong>${p.leaves_count || 0}</strong></div>${canViewFinancial ? `<small class="text-success">مدفوع: ${parseFloat(p.paid_amount || 0).toFixed(2)}</small> - <small class="text-danger">مستحق: ${parseFloat(p.unpaid_amount || 0).toFixed(2)}</small>` : '<small class="text-muted">البيانات المالية للمشرف فقط</small>'}</li>
     `).join('') || '<li class="list-group-item text-muted">لا توجد بيانات</li>';
 
     usersProductivityTbody.innerHTML = (data.users_productivity || []).map(u => {
@@ -6492,7 +6492,7 @@ function updateDoctorSelects(doctors) {
         doctors.forEach(d => {
             const opt = document.createElement('option');
             opt.value = d.id;
-            opt.textContent = `${d.name} (${d.title}) - ${d.note || ''}`;
+            opt.textContent = `${d.name_ar || d.name || ''} (${d.title_ar || d.title || ''}) - ${d.note || ''}`;
             sel.appendChild(opt);
         });
         if (manualOpt) sel.appendChild(manualOpt);
@@ -6512,7 +6512,7 @@ function updatePatientSelects(patients) {
     patients.forEach(p => {
         const opt = document.createElement('option');
         opt.value = p.id;
-        opt.textContent = `${p.name} (${p.identity_number})`;
+        opt.textContent = `${p.name_ar || p.name || ''} (${p.identity_number || ''})`;
         sel.appendChild(opt);
     });
     if (manualOpt) sel.appendChild(manualOpt);
