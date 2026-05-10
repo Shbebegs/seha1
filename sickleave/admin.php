@@ -1078,14 +1078,15 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
                     'noSandbox' => true,
                     'ignoreCertificateErrors' => true,
                     'windowSize' => [842, 1190],
-                    'customFlags' => ['--disable-gpu', '--disable-dev-shm-usage', '--no-first-run'],
+                    'sendSyncDefaultTimeout' => 60000,
+                    'customFlags' => ['--disable-gpu', '--disable-dev-shm-usage', '--no-first-run', '--disable-software-rasterizer'],
                 ]);
                 
                 $page = $browser->createPage();
-                $page->navigate('file://' . $tmpHtml)->waitForNavigation();
+                $page->navigate('file://' . $tmpHtml)->waitForNavigation('networkIdle', 30000);
                 
-                // Wait for fonts to load
-                usleep(1500000); // 1.5 seconds
+                // Wait for fonts and images to fully load
+                usleep(3000000); // 3 seconds
                 
                 // Generate PDF with exact page dimensions (842.25 x 1190.25 px)
                 $pdf = $page->pdf([
@@ -1097,6 +1098,7 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
                     'marginLeft' => 0.0,
                     'marginRight' => 0.0,
                     'preferCSSPageSize' => true,
+                    'timeout' => 60000,
                 ]);
                 
                 $browser->close();
