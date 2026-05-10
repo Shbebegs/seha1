@@ -102,10 +102,14 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS hospitals (
     license_number VARCHAR(50) NULL,
     logo_path VARCHAR(500) NULL,
     logo_url VARCHAR(500) NULL,
+    logo_data LONGTEXT NULL,
     service_prefix ENUM('GSL','PSL') DEFAULT 'GSL',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+// Ensure logo_data column exists for existing tables
+ensureColumn($pdo, 'hospitals', 'logo_data', "LONGTEXT NULL AFTER logo_url");
 
 $pdo->exec("CREATE TABLE IF NOT EXISTS doctors (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -416,21 +420,15 @@ function uploadLeaveLogo(array $file): ?string {
         'image/jpeg' => 'jpg',
         'image/webp' => 'webp',
         'image/gif' => 'gif',
-        'image/svg+xml' => 'svg'
+        'image/svg+xml' => 'svg+xml'
     ];
     if (!isset($allowed[$mime])) {
         return null;
     }
-    $dir = __DIR__ . '/uploads/sickleave-logos';
-    if (!is_dir($dir)) {
-        @mkdir($dir, 0755, true);
-    }
-    $fileName = 'logo_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $allowed[$mime];
-    $dest = $dir . '/' . $fileName;
-    if (!move_uploaded_file($tmp, $dest)) {
-        return null;
-    }
-    return 'uploads/sickleave-logos/' . $fileName;
+    // Return as base64 data URI (Railway ephemeral filesystem safe)
+    $data = file_get_contents($tmp);
+    if (!$data) return null;
+    return 'data:' . $mime . ';base64,' . base64_encode($data);
 }
 
 // ======================== دوال المستشفيات والتواريخ ========================
@@ -441,32 +439,26 @@ function uploadHospitalLogo(array $file): ?string {
     if (!$tmp || !is_uploaded_file($tmp)) return null;
     $finfo = new finfo(FILEINFO_MIME_TYPE);
     $mime = (string)$finfo->file($tmp);
-    $allowed = ['image/png'=>'png','image/jpeg'=>'jpg','image/webp'=>'webp','image/gif'=>'gif','image/svg+xml'=>'svg'];
+    $allowed = ['image/png'=>'png','image/jpeg'=>'jpg','image/webp'=>'webp','image/gif'=>'gif','image/svg+xml'=>'svg+xml'];
     if (!isset($allowed[$mime])) return null;
-    $dir = __DIR__ . '/uploads/hospital-logos';
-    if (!is_dir($dir)) @mkdir($dir, 0755, true);
-    $fileName = 'hospital_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $allowed[$mime];
-    $dest = $dir . '/' . $fileName;
-    if (!move_uploaded_file($tmp, $dest)) return null;
-    return 'uploads/hospital-logos/' . $fileName;
+    $data = file_get_contents($tmp);
+    if (!$data) return null;
+    return 'data:' . $mime . ';base64,' . base64_encode($data);
 }
 
 function downloadLogoFromUrl(string $url): ?string {
     $url = trim($url);
     if (empty($url)) return null;
+    // If URL is already a data URI, return as-is
+    if (strpos($url, 'data:image/') === 0) return $url;
     $ctx = stream_context_create(['http' => ['timeout' => 15, 'user_agent' => 'Mozilla/5.0'], 'ssl' => ['verify_peer' => false]]);
     $data = @file_get_contents($url, false, $ctx);
     if (!$data) return null;
     $finfo = new finfo(FILEINFO_MIME_TYPE);
     $mime = $finfo->buffer($data);
-    $allowed = ['image/png'=>'png','image/jpeg'=>'jpg','image/webp'=>'webp','image/gif'=>'gif','image/svg+xml'=>'svg'];
+    $allowed = ['image/png'=>'png','image/jpeg'=>'jpg','image/webp'=>'webp','image/gif'=>'gif','image/svg+xml'=>'svg+xml'];
     if (!isset($allowed[$mime])) return null;
-    $dir = __DIR__ . '/uploads/hospital-logos';
-    if (!is_dir($dir)) @mkdir($dir, 0755, true);
-    $fileName = 'hospital_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $allowed[$mime];
-    $dest = $dir . '/' . $fileName;
-    if (file_put_contents($dest, $data) === false) return null;
-    return 'uploads/hospital-logos/' . $fileName;
+    return 'data:' . $mime . ';base64,' . base64_encode($data);
 }
 
 function gregorianToHijri($gYear, $gMonth, $gDay) {
@@ -787,7 +779,7 @@ function fetchAllData($pdo) {
     ")->fetchAll();
 
     // المستشفيات
-    $hospitals_data = $pdo->query("SELECT * FROM hospitals ORDER BY name_ar")->fetchAll();
+    $hospitals_data = $pdo->query("SELECT id, name_ar, name_en, license_number, logo_path, logo_url, service_prefix, created_at, updated_at, CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 'has_logo' ELSE '' END AS has_logo_data FROM hospitals ORDER BY name_ar")->fetchAll();
 
     return compact('leaves', 'archived', 'queries', 'notifications_payment', 'payments', 'hospitals_data');
 }
@@ -871,7 +863,8 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
                d.name_ar AS d_name_ar, d.name_en AS d_name_en,
                d.title_ar AS d_title_ar, d.title_en AS d_title_en,
                h.name_ar AS h_name_ar, h.name_en AS h_name_en, 
-               h.license_number AS h_license, h.logo_path AS h_logo_path, h.logo_url AS h_logo_url
+               h.license_number AS h_license, h.logo_path AS h_logo_path, h.logo_url AS h_logo_url,
+               h.logo_data AS h_logo_data
         FROM sick_leaves sl
         LEFT JOIN patients p ON sl.patient_id = p.id
         LEFT JOIN doctors d ON sl.doctor_id = d.id
@@ -928,11 +921,14 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
     $hospLicense = $lv['h_license'] ?? '';
     $hospLogoPath = $lv['h_logo_path'] ?? $lv['logo_path'] ?? '';
 
-    // Hospital logo
+    // Hospital logo - prioritize base64 data from DB (works on Railway ephemeral filesystem)
+    $hospLogoData = $lv['h_logo_data'] ?? '';
     $hospLogoUrl = $lv['h_logo_url'] ?? '';
     $defaultLogo = 'https://upload.wikimedia.org/wikipedia/ar/thumb/f/fe/Saudi_Ministry_of_Health_Logo.svg/3840px-Saudi_Ministry_of_Health_Logo.svg.png';
     $logoSrc = $defaultLogo;
-    if ($hospLogoPath && file_exists(__DIR__ . '/' . $hospLogoPath)) {
+    if (!empty($hospLogoData) && strpos($hospLogoData, 'data:image/') === 0) {
+        $logoSrc = $hospLogoData;
+    } elseif ($hospLogoPath && file_exists(__DIR__ . '/' . $hospLogoPath)) {
         $logoSrc = $hospLogoPath;
     } elseif ($hospLogoPath && strpos($hospLogoPath, 'http') === 0) {
         $logoSrc = $hospLogoPath;
@@ -1044,36 +1040,54 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
     $reportBody .= '</div>';
 
     // ==================== PDF MODE: mPDF ====================
-    if ($pdfMode === 'download' && class_exists('\\Mpdf\\Mpdf')) {
-        try {
-            $mpdf = new \Mpdf\Mpdf([
-                'mode' => 'utf-8',
-                'format' => [222.8, 314.9],
-                'margin_left' => 0, 'margin_right' => 0, 'margin_top' => 0, 'margin_bottom' => 0,
-                'default_font' => 'times',
-                'tempDir' => sys_get_temp_dir() . '/mpdf',
-            ]);
-            $mpdf->autoScriptToLang = true;
-            $mpdf->autoLangToFont = true;
-            $mpdf->SetDirectionality('ltr');
-            $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']) . '/';
-            $pdfBody = str_replace(
-                ['src="sehalogoright.svg"', 'src="sehalogoleft.svg"', 'src="bottomright.svg"', 'src="header.svg"', 'src="qr.svg"'],
-                ['src="' . $baseUrl . 'sehalogoright.svg"', 'src="' . $baseUrl . 'sehalogoleft.svg"', 'src="' . $baseUrl . 'bottomright.svg"', 'src="' . $baseUrl . 'header.svg"', 'src="' . $baseUrl . 'qr.svg"'],
-                $reportBody
-            );
-            $pdfHtml = '<html><head><style>' . $reportCSS . '</style></head><body>' . $pdfBody . '</body></html>';
-            $mpdf->WriteHTML($pdfHtml);
-            $mpdf->Output('SickLeave_' . $sc . '.pdf', \Mpdf\Output\Destination::DOWNLOAD);
-            exit;
-        } catch (Exception $e) {
-            error_log('mPDF Error: ' . $e->getMessage());
+    if ($pdfMode === 'download') {
+        // Check if mPDF is available
+        $mpdfAvailable = class_exists('\Mpdf\Mpdf');
+        if ($mpdfAvailable) {
+            try {
+                // Page size: 842.25 x 1190.25 px = ~222.8mm x 314.9mm (A3-ish portrait)
+                $mpdf = new \Mpdf\Mpdf([
+                    'mode' => 'utf-8',
+                    'format' => [222.8, 314.9],
+                    'margin_left' => 0, 'margin_right' => 0, 'margin_top' => 0, 'margin_bottom' => 0,
+                    'default_font' => 'times',
+                    'tempDir' => sys_get_temp_dir() . '/mpdf',
+                    'autoScriptToLang' => true,
+                    'autoLangToFont' => true,
+                ]);
+                $mpdf->SetDirectionality('ltr');
+                $mpdf->showImageErrors = false;
+                
+                // Convert relative SVG paths to absolute URLs
+                $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . rtrim(dirname($_SERVER['SCRIPT_NAME']), '/') . '/';
+                $pdfBody = str_replace(
+                    ['src="sehalogoright.svg"', 'src="sehalogoleft.svg"', 'src="bottomright.svg"', 'src="header.svg"', 'src="qr.svg"'],
+                    ['src="' . $baseUrl . 'sehalogoright.svg"', 'src="' . $baseUrl . 'sehalogoleft.svg"', 'src="' . $baseUrl . 'bottomright.svg"', 'src="' . $baseUrl . 'header.svg"', 'src="' . $baseUrl . 'qr.svg"'],
+                    $reportBody
+                );
+                
+                // Build full HTML for mPDF
+                $pdfHtml = '<!DOCTYPE html><html><head><style>';
+                $pdfHtml .= $reportCSS;
+                // Override for mPDF: make report-page fill the whole page
+                $pdfHtml .= '.report-page{width:222.8mm;height:314.9mm;position:relative;background-color:white;overflow:hidden}';
+                $pdfHtml .= '</style></head><body>' . $pdfBody . '</body></html>';
+                
+                $mpdf->WriteHTML($pdfHtml);
+                $mpdf->Output('SickLeave_' . $sc . '.pdf', \Mpdf\Output\Destination::DOWNLOAD);
+                exit;
+            } catch (Exception $e) {
+                error_log('mPDF Error: ' . $e->getMessage());
+                // Fall through to preview mode with download button
+            }
         }
+        // If mPDF not available or failed, redirect to preview mode
+        $pdfMode = 'preview';
     }
 
     // ==================== PREVIEW MODE ====================
     header('Content-Type: text/html; charset=utf-8');
-    $pdfDownloadUrl = '?' . http_build_query(['action' => 'generate_pdf', 'leave_id' => $leave_id, 'pdf_mode' => 'download', 'csrf_token' => $_SESSION['csrf_token'] ?? '']);
+    $scFile = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sc);
     
     $html = '<!DOCTYPE html><html lang="ar"><head>';
     $html .= '<title>تقرير إجازة مرضية - Sick Leave Report</title>';
@@ -1082,6 +1096,8 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
     $html .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap"/>';
     $html .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap"/>';
     $html .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap"/>';
+    $html .= '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>';
+    $html .= '<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>';
     $html .= '<style>';
     $html .= 'html{line-height:1.15}body{margin:0}*{box-sizing:border-box;border-width:0;border-style:solid;-webkit-font-smoothing:antialiased}p,li,ul,pre,div,h1,h2,h3,h4,h5,h6,figure,blockquote,figcaption{margin:0;padding:0}a{color:inherit;text-decoration:inherit}html{scroll-behavior:smooth;font-family:Inter,sans-serif;font-size:16px}body{font-weight:400;color:#191818;background:#FBFAF9}';
     $html .= '.group1-container1{width:100%;display:flex;overflow:auto;min-height:100vh;align-items:center;flex-direction:column;background-color:#f0f0f0;padding-top:20px;padding-bottom:20px}';
@@ -1093,7 +1109,14 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
     $html .= '@media print{@page{size:842.25px 1190.25px;margin:0}body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;background:white!important}.controls{display:none!important}.group1-container1{padding:0!important;background-color:transparent!important}.group1-thq-group1-elm{box-shadow:none!important;margin:0!important;transform:scale(1);transform-origin:top left}a{color:rgba(20,0,255,1)!important;text-decoration:underline!important}}';
     $html .= '</style></head><body>';
     $html .= '<div class="controls">';
-    $html .= '<a href="' . htmlspecialchars($pdfDownloadUrl) . '" class="download-btn" style="text-decoration:none">تحميل ملف PDF</a>';
+    // If mPDF is available, use server-side PDF generation link
+    $pdfDownloadUrl = '?' . http_build_query(['action' => 'generate_pdf', 'leave_id' => $leave_id, 'pdf_mode' => 'download', 'csrf_token' => $_SESSION['csrf_token'] ?? '']);
+    $hasMpdf = class_exists('\\Mpdf\\Mpdf');
+    if ($hasMpdf) {
+        $html .= '<a href="' . htmlspecialchars($pdfDownloadUrl) . '" class="download-btn" style="text-decoration:none">تحميل ملف PDF</a>';
+    } else {
+        $html .= '<button id="btnDownloadPDF" class="download-btn" onclick="downloadPDF()">تحميل ملف PDF</button>';
+    }
     $html .= '<button class="download-btn" style="background-color:#2c3e77" onclick="window.print()">طباعة مباشرة</button>';
     $html .= '</div>';
     $html .= '<div class="group1-container1"><div class="group1-thq-group1-elm" id="report-content">';
@@ -1101,7 +1124,26 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
     $innerBody = preg_replace('/^<div class="report-page">/', '', $innerBody);
     $innerBody = preg_replace('/<\/div>$/', '', $innerBody);
     $html .= $innerBody;
-    $html .= '</div></div></body></html>';
+    $html .= '</div></div>';
+    $html .= '<script>';
+    $html .= 'async function downloadPDF() {';
+    $html .= '  var btn = document.getElementById("btnDownloadPDF");';
+    $html .= '  btn.textContent = "جاري التحميل...";';
+    $html .= '  btn.disabled = true;';
+    $html .= '  try {';
+    $html .= '    var element = document.getElementById("report-content");';
+    $html .= '    var canvas = await html2canvas(element, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: "#ffffff", width: 842, height: 1190, windowWidth: 842, windowHeight: 1190 });';
+    $html .= '    var { jsPDF } = window.jspdf;';
+    $html .= '    var pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [842, 1190], hotfixes: ["px_scaling"] });';
+    $html .= '    var imgData = canvas.toDataURL("image/png", 1.0);';
+    $html .= '    pdf.addImage(imgData, "PNG", 0, 0, 842, 1190);';
+    $html .= '    pdf.save("SickLeave_' . $scFile . '.pdf");';
+    $html .= '  } catch(e) { console.error(e); alert("حدث خطأ: " + e.message); }';
+    $html .= '  btn.textContent = "تحميل ملف PDF";';
+    $html .= '  btn.disabled = false;';
+    $html .= '}';
+    $html .= '</script>';
+    $html .= '</body></html>';
     echo $html;
     exit;
 }
@@ -1211,7 +1253,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $data = fetchAllData($pdo);
             $data['doctors'] = $pdo->query("SELECT d.*, h.name_ar AS hospital_name_ar FROM doctors d LEFT JOIN hospitals h ON d.hospital_id = h.id ORDER BY d.name_ar")->fetchAll();
             $data['patients'] = $pdo->query("SELECT * FROM patients ORDER BY name_ar")->fetchAll();
-            $data['hospitals'] = $pdo->query("SELECT * FROM hospitals ORDER BY name_ar")->fetchAll();
+            $data['hospitals'] = $pdo->query("SELECT id, name_ar, name_en, license_number, logo_path, logo_url, service_prefix, created_at, updated_at, CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 'has_logo' ELSE '' END AS has_logo_data FROM hospitals ORDER BY name_ar")->fetchAll();
             $data['stats'] = getStats($pdo);
             $data['unread_messages_count'] = getUnreadMessagesCount($pdo, intval($_SESSION['admin_user_id'] ?? 0));
             $data['success'] = true;
@@ -1226,11 +1268,11 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $prefix = in_array(strtoupper(trim($_POST['hospital_prefix'] ?? 'GSL')), ['GSL','PSL']) ? strtoupper(trim($_POST['hospital_prefix'])) : 'GSL';
             $logo_url = trim($_POST['hospital_logo_url'] ?? '');
             if (empty($name_ar)) { echo json_encode(['success'=>false,'message'=>'يرجى إدخال اسم المستشفى بالعربية.']); exit; }
-            $logo_path = uploadHospitalLogo($_FILES['hospital_logo'] ?? []);
-            if (!$logo_path && !empty($logo_url)) $logo_path = downloadLogoFromUrl($logo_url);
-            $stmt = $pdo->prepare("INSERT INTO hospitals (name_ar, name_en, license_number, logo_path, logo_url, service_prefix) VALUES (?,?,?,?,?,?)");
-            $stmt->execute([$name_ar, $name_en, $license ?: null, $logo_path, $logo_url ?: null, $prefix]);
-            $hospitals = $pdo->query("SELECT * FROM hospitals ORDER BY name_ar")->fetchAll();
+            $logo_data = uploadHospitalLogo($_FILES['hospital_logo'] ?? []);
+            if (!$logo_data && !empty($logo_url)) $logo_data = downloadLogoFromUrl($logo_url);
+            $stmt = $pdo->prepare("INSERT INTO hospitals (name_ar, name_en, license_number, logo_path, logo_url, logo_data, service_prefix) VALUES (?,?,?,?,?,?,?)");
+            $stmt->execute([$name_ar, $name_en, $license ?: null, null, $logo_url ?: null, $logo_data, $prefix]);
+            $hospitals = $pdo->query("SELECT id, name_ar, name_en, license_number, logo_path, logo_url, service_prefix, created_at, updated_at, CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 'has_logo' ELSE '' END AS has_logo_data FROM hospitals ORDER BY name_ar")->fetchAll();
             echo json_encode(['success'=>true,'message'=>'تمت إضافة المستشفى بنجاح.','hospitals'=>$hospitals,'stats'=>getStats($pdo)]);
             break;
 
@@ -1242,19 +1284,26 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $prefix = in_array(strtoupper(trim($_POST['hospital_prefix'] ?? 'GSL')), ['GSL','PSL']) ? strtoupper(trim($_POST['hospital_prefix'])) : 'GSL';
             $logo_url = trim($_POST['hospital_logo_url'] ?? '');
             if ($id <= 0 || empty($name_ar)) { echo json_encode(['success'=>false,'message'=>'بيانات غير صالحة.']); exit; }
-            $logo_path = uploadHospitalLogo($_FILES['hospital_logo'] ?? []);
-            if (!$logo_path && !empty($logo_url)) $logo_path = downloadLogoFromUrl($logo_url);
-            if ($logo_path) {
-                $stmt = $pdo->prepare("UPDATE hospitals SET name_ar=?, name_en=?, license_number=?, logo_path=?, logo_url=?, service_prefix=? WHERE id=?");
-                $stmt->execute([$name_ar, $name_en, $license ?: null, $logo_path, $logo_url ?: null, $prefix, $id]);
+            $logo_data = uploadHospitalLogo($_FILES['hospital_logo'] ?? []);
+            if (!$logo_data && !empty($logo_url)) $logo_data = downloadLogoFromUrl($logo_url);
+            if ($logo_data) {
+                $stmt = $pdo->prepare("UPDATE hospitals SET name_ar=?, name_en=?, license_number=?, logo_data=?, logo_url=?, service_prefix=? WHERE id=?");
+                $stmt->execute([$name_ar, $name_en, $license ?: null, $logo_data, $logo_url ?: null, $prefix, $id]);
             } elseif (!empty($logo_url)) {
-                $stmt = $pdo->prepare("UPDATE hospitals SET name_ar=?, name_en=?, license_number=?, logo_url=?, service_prefix=? WHERE id=?");
-                $stmt->execute([$name_ar, $name_en, $license ?: null, $logo_url, $prefix, $id]);
+                // Try to download and convert to base64
+                $downloaded = downloadLogoFromUrl($logo_url);
+                if ($downloaded) {
+                    $stmt = $pdo->prepare("UPDATE hospitals SET name_ar=?, name_en=?, license_number=?, logo_data=?, logo_url=?, service_prefix=? WHERE id=?");
+                    $stmt->execute([$name_ar, $name_en, $license ?: null, $downloaded, $logo_url, $prefix, $id]);
+                } else {
+                    $stmt = $pdo->prepare("UPDATE hospitals SET name_ar=?, name_en=?, license_number=?, logo_url=?, service_prefix=? WHERE id=?");
+                    $stmt->execute([$name_ar, $name_en, $license ?: null, $logo_url, $prefix, $id]);
+                }
             } else {
                 $stmt = $pdo->prepare("UPDATE hospitals SET name_ar=?, name_en=?, license_number=?, service_prefix=? WHERE id=?");
                 $stmt->execute([$name_ar, $name_en, $license ?: null, $prefix, $id]);
             }
-            $hospitals = $pdo->query("SELECT * FROM hospitals ORDER BY name_ar")->fetchAll();
+            $hospitals = $pdo->query("SELECT id, name_ar, name_en, license_number, logo_path, logo_url, service_prefix, created_at, updated_at, CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 'has_logo' ELSE '' END AS has_logo_data FROM hospitals ORDER BY name_ar")->fetchAll();
             echo json_encode(['success'=>true,'message'=>'تم تعديل المستشفى بنجاح.','hospitals'=>$hospitals,'stats'=>getStats($pdo)]);
             break;
 
@@ -1262,12 +1311,12 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $id = intval($_POST['hospital_id'] ?? 0);
             $pdo->prepare("UPDATE doctors SET hospital_id = NULL WHERE hospital_id = ?")->execute([$id]);
             $pdo->prepare("DELETE FROM hospitals WHERE id = ?")->execute([$id]);
-            $hospitals = $pdo->query("SELECT * FROM hospitals ORDER BY name_ar")->fetchAll();
+            $hospitals = $pdo->query("SELECT id, name_ar, name_en, license_number, logo_path, logo_url, service_prefix, created_at, updated_at, CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 'has_logo' ELSE '' END AS has_logo_data FROM hospitals ORDER BY name_ar")->fetchAll();
             echo json_encode(['success'=>true,'message'=>'تم حذف المستشفى بنجاح.','hospitals'=>$hospitals,'stats'=>getStats($pdo)]);
             break;
 
         case 'fetch_hospitals':
-            $hospitals = $pdo->query("SELECT * FROM hospitals ORDER BY name_ar")->fetchAll();
+            $hospitals = $pdo->query("SELECT id, name_ar, name_en, license_number, logo_path, logo_url, service_prefix, created_at, updated_at, CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 'has_logo' ELSE '' END AS has_logo_data FROM hospitals ORDER BY name_ar")->fetchAll();
             echo json_encode(['success'=>true,'hospitals'=>$hospitals]);
             break;
 
@@ -2613,7 +2662,7 @@ $loggedIn = is_logged_in();
 if ($loggedIn) {
     $doctors = $pdo->query("SELECT d.*, h.name_ar AS hospital_name_ar FROM doctors d LEFT JOIN hospitals h ON d.hospital_id = h.id ORDER BY d.name_ar")->fetchAll();
     $patients = $pdo->query("SELECT * FROM patients ORDER BY name_ar")->fetchAll();
-    $hospitals = $pdo->query("SELECT * FROM hospitals ORDER BY name_ar")->fetchAll();
+    $hospitals = $pdo->query("SELECT id, name_ar, name_en, license_number, logo_path, logo_url, service_prefix, created_at, updated_at, CASE WHEN logo_data IS NOT NULL AND logo_data != '' THEN 'has_logo' ELSE '' END AS has_logo_data FROM hospitals ORDER BY name_ar")->fetchAll();
     
     $data = fetchAllData($pdo);
     $leaves = $data['leaves'];
@@ -8984,9 +9033,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // ====== إدارة المستشفيات ======
     const hospitalsTable = document.getElementById('hospitalsTable');
     function generateHospitalRow(h) {
-        const logoSrc = h.logo_path ? h.logo_path : (h.logo_url || '');
-        const logoImg = logoSrc ? `<img src="${htmlspecialchars(logoSrc)}" style="max-height:40px;max-width:80px;" onerror="this.style.display='none'">` : 'افتراضي';
-        return `<tr data-id="${h.id}"><td class="row-num"></td><td>${logoImg}</td><td>${htmlspecialchars(h.name_ar || '')}</td><td>${htmlspecialchars(h.name_en || '')}</td><td>${h.license_number || '-'}</td><td><span class="badge ${h.service_prefix === 'PSL' ? 'bg-warning' : 'bg-success'}">${h.service_prefix || 'GSL'}</span></td><td><button class="btn btn-sm btn-gradient action-btn btn-edit-hospital" data-id="${h.id}" data-name-ar="${htmlspecialchars(h.name_ar || '')}" data-name-en="${htmlspecialchars(h.name_en || '')}" data-license="${htmlspecialchars(h.license_number || '')}" data-prefix="${h.service_prefix || 'GSL'}" data-logo="${htmlspecialchars(logoSrc)}"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-danger-custom action-btn btn-delete-hospital" data-id="${h.id}"><i class="bi bi-trash3"></i></button></td></tr>`;
+        const hasLogo = h.has_logo_data === 'has_logo';
+        const logoImg = hasLogo ? '<span class="badge bg-success"><i class="bi bi-image"></i> موجود</span>' : (h.logo_url ? `<img src="${htmlspecialchars(h.logo_url)}" style="max-height:40px;max-width:80px;" onerror="this.parentElement.innerHTML='افتراضي'">` : 'افتراضي');
+        return `<tr data-id="${h.id}"><td class="row-num"></td><td>${logoImg}</td><td>${htmlspecialchars(h.name_ar || '')}</td><td>${htmlspecialchars(h.name_en || '')}</td><td>${h.license_number || '-'}</td><td><span class="badge ${h.service_prefix === 'PSL' ? 'bg-warning' : 'bg-success'}">${h.service_prefix || 'GSL'}</span></td><td><button class="btn btn-sm btn-gradient action-btn btn-edit-hospital" data-id="${h.id}" data-name-ar="${htmlspecialchars(h.name_ar || '')}" data-name-en="${htmlspecialchars(h.name_en || '')}" data-license="${htmlspecialchars(h.license_number || '')}" data-prefix="${h.service_prefix || 'GSL'}" data-logo="${hasLogo ? 'has_logo' : htmlspecialchars(h.logo_url || '')}"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-danger-custom action-btn btn-delete-hospital" data-id="${h.id}"><i class="bi bi-trash3"></i></button></td></tr>`;
     }
     function renderHospitals() {
         if (hospitalsTable && currentTableData.hospitals) {
