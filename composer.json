@@ -1,0 +1,11 @@
+{
+    "require": {
+        "mpdf/mpdf": "^8.2"
+    },
+    "config": {
+        "allow-plugins": {
+            "mpdf/mpdf": true
+        },
+        "optimize-autoloader": true
+    }
+}
