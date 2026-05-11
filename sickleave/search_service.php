@@ -1,17 +1,21 @@
 <?php
-header('Content-Type: application/json; charset=utf-8');
+// إخفاء أخطاء PHP عن المستخدمين
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(0);
 
-// ملف سجل الأخطاء
+header('Content-Type: application/json; charset=utf-8');
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header_remove('X-Powered-By');
+header_remove('Server');
+
+// ملف سجل الأخطاء (داخلي فقط)
 define('ERROR_LOG_FILE', __DIR__ . '/error_log.txt');
 
 function log_error($msg) {
     file_put_contents(ERROR_LOG_FILE, date('[Y-m-d H:i:s] ') . $msg . "\n", FILE_APPEND);
 }
-
-// أثناء التجربة نعرض الأخطاء؛ بعد التأكد يمكن تعطيلهم
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
 
 // ==== وظائف الاتصال بقاعدتين وضمان وجود جدول leave_queries ====
 
@@ -19,7 +23,7 @@ function connect_db1() {
     $conn = @new mysqli(
         'mysql.railway.internal',
         'root',
-        'ExvKbuJnGIvDATyXWCHtpjOFluFAgeqQ',
+        'mDxJcHtRORIlpLbtDJKKckeuLgozRUVO',
         'railway',
         3306
     );
@@ -34,10 +38,10 @@ function connect_db1() {
 
 function connect_db2() {
     $conn = @new mysqli(
-        'mysql.railway.internal',
-        'root',
-        'CSCoMqXcUDBrzyRPMgjIxRVziMqcOFoK',
-        'railway',
+        'c9cujduvu830eexs.cbetxkdyhwsb.us-east-1.rds.amazonaws.com',
+        'q2xjpqcepsmd4v12',
+        'v8lcs6awp4vj9u28',
+        'cdidptf4q81rafg8',
         3306
     );
     if ($conn->connect_error) {
@@ -83,13 +87,17 @@ if ($id === '') {
     exit;
 }
 
-$code = strtoupper($code); // توحيد الرمز كحروف كبيرة
-
-// حماية خاصة بالمدخل السري
-if ($code === 'osama2030' || $id === 'osama2030') {
-    echo json_encode(['status' => 'redirect', 'url' => 'admin.php']);
+// التحقق من صحة المدخلات ومنع الأحرف غير المسموح بها
+if (!preg_match('/^[A-Za-z0-9\-]{1,30}$/', $code)) {
+    echo json_encode(['status' => 'error', 'msg' => 'رمز الخدمة غير صالح']);
     exit;
 }
+if (!preg_match('/^[0-9A-Za-z\-]{1,20}$/', $id)) {
+    echo json_encode(['status' => 'error', 'msg' => 'رقم الهوية غير صالح']);
+    exit;
+}
+
+$code = strtoupper($code); // توحيد الرمز كحروف كبيرة
 
 // ==== دوال البحث وتسجيل الاستعلام ====
 
@@ -100,13 +108,13 @@ function search_active_leave($conn, $code, $id) {
         sl.id                 AS leave_id,
         sl.service_code       AS service_code,
         p.identity_number     AS identity_number,
-        COALESCE(p.name_ar, p.name_en, '') AS patient_name,
+        p.name                AS patient_name,
         sl.issue_date         AS issue_date,
         sl.start_date         AS start_date,
         sl.end_date           AS end_date,
         sl.days_count         AS days_count,
-        COALESCE(d.name_ar, d.name_en, '') AS doctor_name,
-        COALESCE(d.title_ar, d.title_en, '') AS doctor_title,
+        d.name                AS doctor_name,
+        d.title               AS doctor_title,
         sl.is_companion       AS is_companion,
         sl.companion_name     AS companion_name,
         sl.companion_relation AS companion_relation
@@ -115,7 +123,7 @@ function search_active_leave($conn, $code, $id) {
       INNER JOIN doctors   AS d ON sl.doctor_id  = d.id
       WHERE sl.service_code   = ?
         AND p.identity_number = ?
-        AND sl.deleted_at     IS NULL
+        AND sl.is_deleted     = 0
       LIMIT 1
     ";
     $stmt = $conn->prepare($sql);
@@ -148,7 +156,7 @@ function search_archived_leave($conn, $code, $id) {
       INNER JOIN patients  AS p ON sl.patient_id = p.id
       WHERE sl.service_code   = ?
         AND p.identity_number = ?
-        AND sl.deleted_at     IS NOT NULL
+        AND sl.is_deleted     = 1
       LIMIT 1
     ";
     $stmt = $conn->prepare($sql);
