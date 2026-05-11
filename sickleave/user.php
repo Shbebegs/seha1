@@ -189,6 +189,37 @@ if (isPatientLoggedIn() && !checkPatientActive($pdo)) {
     exit;
 }
 
+// جلب إشعارات المستخدم (AJAX)
+if ($action === 'get_user_notifications' && isPatientLoggedIn()) {
+    header('Content-Type: application/json; charset=utf-8');
+    $uid = (int)$_SESSION['patient_user_id'];
+    // Ensure table exists
+    $pdo->exec("CREATE TABLE IF NOT EXISTS user_notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        message TEXT NOT NULL,
+        is_read TINYINT(1) DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES admin_users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $stmt = $pdo->prepare("SELECT * FROM user_notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 20");
+    $stmt->execute([$uid]);
+    $notifs = $stmt->fetchAll();
+    $unreadStmt = $pdo->prepare("SELECT COUNT(*) FROM user_notifications WHERE user_id = ? AND is_read = 0");
+    $unreadStmt->execute([$uid]);
+    echo json_encode(['success' => true, 'notifications' => $notifs, 'unread_count' => (int)$unreadStmt->fetchColumn()]);
+    exit;
+}
+
+// تحديد الإشعارات كمقروءة (AJAX)
+if ($action === 'mark_user_notifications_read' && isPatientLoggedIn()) {
+    header('Content-Type: application/json; charset=utf-8');
+    $uid = (int)$_SESSION['patient_user_id'];
+    $pdo->prepare("UPDATE user_notifications SET is_read = 1 WHERE user_id = ?")->execute([$uid]);
+    echo json_encode(['success' => true]);
+    exit;
+}
+
 // جلب الأطباء حسب المستشفى (AJAX)
 if ($action === 'get_doctors_by_hospital' && isPatientLoggedIn()) {
     header('Content-Type: application/json; charset=utf-8');
@@ -326,6 +357,7 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
     $leaveId = (int)($_GET['leave_id'] ?? 0);
     $userId  = (int)$_SESSION['patient_user_id'];
     $patientId = (int)$_SESSION['patient_id'];
+    $pdfMode = $_GET['pdf_mode'] ?? 'preview';
 
     $stmt = $pdo->prepare("
         SELECT sl.*,
@@ -433,6 +465,88 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
     $durationEn = $daysEn . ' ( ' . $startEn . ' to ' . $endEn . ' )';
     $durationAr = '<span style="font-family: \'Times New Roman\', serif; font-size: 14.5px; font-weight: 400;">' . $daysAr . '</span> <span style="font-family: \'Noto Sans Arabic\', sans-serif; font-size: 14.5px; font-weight: 400;">' . $daysArWord . '</span> ( ' . formatHijriDateSpanUser($startHj) . ' <span style="font-family: \'Noto Sans Arabic\', sans-serif; font-size: 13.5px; font-weight: 400;">إلى</span> ' . formatHijriDateSpanUser($endHj) . ' )';
 
+    // ===== وضع التحميل المباشر (WeasyPrint) =====
+    if ($pdfMode === 'download') {
+        $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']) . '/';
+        $scFile = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sc);
+
+        $pdfHtml  = '<!DOCTYPE html><html lang="ar"><head><meta charset="utf-8"/>';
+        $pdfHtml .= '<title>Sick Leave Report</title>';
+        $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap" />';
+        $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap" />';
+        $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap" />';
+        $pdfHtml .= '<style>html{line-height:1.15}body{margin:0}*{box-sizing:border-box;border-width:0;border-style:solid}p,li,ul,pre,div,h1,h2,h3,h4,h5,h6,figure,blockquote,figcaption{margin:0;padding:0}a{color:inherit;text-decoration:inherit}</style>';
+        $pdfHtml .= '<style>html{font-family:Inter,sans-serif;font-size:16px}body{font-weight:400;color:#191818;background:#ffffff;margin:0;padding:0}</style>';
+        $pdfHtml .= '<style>@page{size:842.25px 1190.25px;margin:0}.group1-container1{width:842.25px;height:1190.25px;position:relative;background-color:transparent;margin:0;padding:0}.group1-thq-group1-elm{width:842.25px;height:1190.25px;position:relative;background-color:white;margin:0;padding:0}.info-table{position:absolute;top:242px;left:36px;width:770px;border-collapse:separate;border-spacing:0;border:1px solid #cccccc;border-radius:8px;overflow:hidden;background-color:transparent;z-index:10}.info-table td{border-bottom:1px solid #cccccc;border-right:1px solid #cccccc;height:42px;text-align:center;vertical-align:middle;padding:4px 8px}.info-table td:last-child{border-right:none}.info-table tr:last-child td{border-bottom:none}.info-table .en-title{width:161px;color:rgba(54,111,181,1);font-size:13.5px;font-weight:700;text-align:center;font-family:"Times New Roman",serif}.info-table .data-cell{width:240px;color:rgba(44,62,119,1);font-size:13.5px;font-family:"Times New Roman",serif;font-weight:400;text-align:center}.info-table .date-cell{font-size:13.9px}.info-table .data-cell.ar-text{font-family:"Noto Sans Arabic",sans-serif}.info-table .ar-title{width:140px;color:rgba(54,111,181,1);font-size:13.5px;font-weight:700;text-align:center;font-family:"Noto Sans Arabic",sans-serif;white-space:nowrap}.info-table tr.blue-row td{background-color:#2c3e77;color:#ffffff;border-bottom:1px solid #cccccc;border-right:1px solid #cccccc}.info-table tr.blue-row td:last-child{border-right:none}.info-table .blue-row .data-cell.ar-text{color:rgba(255,255,255,1);font-size:13.5px;font-family:"Times New Roman",serif;font-weight:400}.info-table .blue-row .data-cell{color:rgba(255,255,255,1)}.info-table tr.gray-row td{background-color:#f7f7f7}.en-spaced{letter-spacing:0.3px}:root{--footer-offset:40px}.group1-thq-staticinfo-elm{top:125px;left:36.65px;width:768.35px;height:811.91px;display:flex;position:absolute;align-items:flex-start}.top-right-placeholder{position:absolute;top:36px;left:592px;width:214px;height:107px;display:flex;align-items:center;justify-content:center}.top-left-placeholder{position:absolute;top:36px;left:36px;width:149.96px;height:65.98px;display:flex;align-items:center;justify-content:center}.bottom-right-placeholder{position:absolute;top:1005px;left:657.17px;width:149.96px;height:71.23px;display:flex;align-items:center;justify-content:center}.header-placeholder{top:-55px;left:320px;width:160px;height:50px;position:absolute;display:flex;align-items:center;justify-content:center}.group1-thq-text-elm41{top:40px;left:289px;color:rgba(48,109,181,1);width:215px;position:absolute;font-size:22.5px;font-weight:700;text-align:center;line-height:30px}.group1-thq-text-elm44{top:-10px;left:310px;color:rgba(0,0,0,1);position:absolute;font-size:17.3px;font-weight:400;text-align:left;font-family:"Times New Roman",serif}.group1-thq-hospitallogoandthename-elm{top:760px;left:438.94px;width:403px;height:202.78px;display:flex;position:absolute;align-items:flex-start}.placeholder-logo-hospital{top:-12px;left:133px;width:136px;height:136px;position:absolute;display:flex;align-items:center;justify-content:center}.group1-thq-text-elm18{top:120px;color:rgba(0,0,0,1);width:403px;height:auto;position:absolute;font-size:12.8px;text-align:center;line-height:22px}.group1-thq-thedateofissueandalsotimeofissue-elm{top:calc(989.85px + var(--footer-offset));left:37.37px;width:250px;height:56px;display:flex;position:absolute;align-items:flex-start}.group1-thq-text-elm22{color:rgba(0,0,0,1);font-size:12.5px;font-weight:700;text-align:left;line-height:28px;font-family:"Times New Roman",serif;position:absolute;white-space:nowrap}.group1-thq-text-elm36{top:calc(724.55px + var(--footer-offset));left:29.23px;color:rgba(0,0,0,1);position:absolute;font-size:12px;font-weight:700;text-align:center;font-family:"Noto Sans Arabic",sans-serif;line-height:23px}.group1-thq-text-elm39{top:calc(775.17px + var(--footer-offset));left:55px;color:rgba(0,0,0,1);position:absolute;font-size:12px;font-weight:700;text-align:left;font-family:"Times New Roman",serif}.group1-thq-text-elm40{top:calc(798.91px + var(--footer-offset));left:108.35px;color:rgba(20,0,255,1);position:absolute;font-size:11px;font-weight:700;text-align:left;text-decoration:underline;font-family:"Times New Roman",serif}.placeholder-136{position:absolute;top:620px;left:122px;width:136px;height:136px;display:flex;align-items:center;justify-content:center}.vertical-divider{position:absolute;top:735px;left:436px;width:1px;height:7cm;background-color:#dddddd}.thin-slash{font-weight:300;font-family:"Inter",sans-serif;margin:0 3px;display:inline-block}</style>';
+        $pdfHtml .= '</head><body>';
+
+        $reportBodyPdf  = '<div class="group1-container1"><div class="group1-thq-group1-elm">';
+        $reportBodyPdf .= '<div class="top-right-placeholder"><img src="' . $baseUrl . 'sehalogoright.svg" style="width:100%;height:100%"/></div>';
+        $reportBodyPdf .= '<div class="top-left-placeholder"><img src="' . $baseUrl . 'sehalogoleft.svg" style="width:100%;height:100%"/></div>';
+        $reportBodyPdf .= '<div class="bottom-right-placeholder"><img src="' . $baseUrl . 'bottomright.svg" style="width:100%;height:100%"/></div>';
+        $reportBodyPdf .= '<div class="group1-thq-staticinfo-elm">';
+        $reportBodyPdf .= '<div class="header-placeholder"><img src="' . $baseUrl . 'header.svg" style="width:100%;height:100%"/></div>';
+        $reportBodyPdf .= '<span class="group1-thq-text-elm41"><span style="font-size:22.5px;font-family:\'Noto Sans Arabic\',sans-serif;font-weight:700;color:#306db5">تقرير إجازة مرضية</span><br/><span style="font-size:18.7px;font-family:\'Times New Roman\',serif;font-weight:700;color:#2c3e77">Sick Leave Report</span></span>';
+        $reportBodyPdf .= '<span class="group1-thq-text-elm44">Kingdom of Saudi Arabia</span>';
+        $reportBodyPdf .= '<div class="placeholder-136"><img src="' . $baseUrl . 'qr.svg" style="width:130px;height:130px"/></div>';
+        $reportBodyPdf .= '<span class="group1-thq-text-elm36" dir="rtl">للتحقق من بيانات التقرير يرجى التأكد من زيارة موقع منصة صحة<br/>الرسمي</span>';
+        $reportBodyPdf .= '<span class="group1-thq-text-elm39">To check the report please visit Seha\'s official website</span>';
+        $reportBodyPdf .= '<span class="group1-thq-text-elm40"><a href="https://seha-sa-iniquiries-slenquiry.up.railway.app/" target="_blank">www.seha.sa/#/inquiries/slenquiry</a></span>';
+        $reportBodyPdf .= '</div>';
+        $reportBodyPdf .= '<table class="info-table" cellpadding="0" cellspacing="0"><tbody>';
+        $reportBodyPdf .= '<tr><td class="en-title">Leave ID</td><td class="data-cell" colspan="2">' . $sc . '</td><td class="ar-title">رمز الإجازة</td></tr>';
+        $reportBodyPdf .= '<tr class="blue-row"><td class="en-title" style="color:white">Leave Duration</td><td class="data-cell">' . $durationEn . '</td><td class="data-cell ar-text" dir="rtl">' . $durationAr . '</td><td class="ar-title" style="color:white">مدة الإجازة</td></tr>';
+        $reportBodyPdf .= '<tr><td class="en-title">Admission Date</td><td class="data-cell date-cell">' . $startEn . '</td><td class="data-cell date-cell" dir="ltr">' . $startHj . '</td><td class="ar-title">تاريخ الدخول</td></tr>';
+        $reportBodyPdf .= '<tr class="gray-row"><td class="en-title">Discharge Date</td><td class="data-cell date-cell">' . $endEn . '</td><td class="data-cell date-cell" dir="ltr">' . $endHj . '</td><td class="ar-title">تاريخ الخروج</td></tr>';
+        $reportBodyPdf .= '<tr><td class="en-title">Issue Date</td><td class="data-cell" colspan="2">' . $issueEn . '</td><td class="ar-title">تاريخ الإصدار</td></tr>';
+        $reportBodyPdf .= '<tr class="gray-row"><td class="en-title">Patient Name</td><td class="data-cell en-spaced">' . $patNameEn . '</td><td class="data-cell ar-text">' . $patNameAr . '</td><td class="ar-title">الاسم</td></tr>';
+        $reportBodyPdf .= '<tr><td class="en-title">National ID / Iqama</td><td class="data-cell" colspan="2">' . $patId . '</td><td class="ar-title">رقم الهوية<span class="thin-slash">/</span>الإقامة</td></tr>';
+        $reportBodyPdf .= '<tr class="gray-row"><td class="en-title">Nationality</td><td class="data-cell en-spaced">' . $natEn . '</td><td class="data-cell ar-text">' . $natAr . '</td><td class="ar-title">الجنسية</td></tr>';
+        $reportBodyPdf .= '<tr><td class="en-title">Employer</td><td class="data-cell en-spaced">' . $empEn . '</td><td class="data-cell ar-text">' . $empAr . '</td><td class="ar-title">جهة العمل</td></tr>';
+        $reportBodyPdf .= '<tr class="gray-row"><td class="en-title">Physician Name</td><td class="data-cell en-spaced">' . $docNameEn . '</td><td class="data-cell ar-text">' . $docNameAr . '</td><td class="ar-title">اسم الطبيب المعالج</td></tr>';
+        $reportBodyPdf .= '<tr><td class="en-title">Position</td><td class="data-cell en-spaced">' . $docTitleEn . '</td><td class="data-cell ar-text">' . $docTitleAr . '</td><td class="ar-title">المسمى الوظيفي</td></tr>';
+        $reportBodyPdf .= '</tbody></table>';
+        $reportBodyPdf .= '<div class="vertical-divider"></div>';
+        $reportBodyPdf .= '<div class="group1-thq-hospitallogoandthename-elm">';
+        $reportBodyPdf .= '<div class="placeholder-logo-hospital">' . $hospLogoHtml . '</div>';
+        $reportBodyPdf .= '<span class="group1-thq-text-elm18"><span style="font-family:\'Noto Sans Arabic\',sans-serif;font-weight:700">' . $hospNameAr . '</span><br/><span class="en-spaced" style="font-family:\'Times New Roman\',serif;font-weight:700">' . $hospNameEn . '</span><br/>';
+        if (!empty($licenseHtml)) $reportBodyPdf .= $licenseHtml;
+        $reportBodyPdf .= '</span></div>';
+        $reportBodyPdf .= '<div class="group1-thq-thedateofissueandalsotimeofissue-elm"><span class="group1-thq-text-elm22"><span>' . $timestampLine . '</span><br/><span>' . $dateLine . '</span></span></div>';
+        $reportBodyPdf .= '</div></div>';
+
+        $pdfHtml .= $reportBodyPdf;
+        $pdfHtml .= '</body></html>';
+
+        @mkdir('/tmp/weasyprint', 0777, true);
+        $tmpHtml = '/tmp/weasyprint/user_report_' . uniqid() . '.html';
+        $tmpPdf  = '/tmp/weasyprint/user_report_' . uniqid() . '.pdf';
+        file_put_contents($tmpHtml, $pdfHtml);
+
+        $scriptPath = __DIR__ . '/generate_pdf.py';
+        $pythonBin = 'python3';
+        foreach (['/usr/bin/python3.13', '/usr/bin/python3.12', '/usr/bin/python3.11', '/usr/local/bin/python3', '/usr/bin/python3'] as $p) {
+            if (is_file($p) && !is_link($p)) { $pythonBin = $p; break; }
+            if (is_link($p)) { $real = realpath($p); if ($real && is_file($real)) { $pythonBin = $real; break; } }
+        }
+        $scFile = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sc);
+        $cmd = $pythonBin . ' "' . $scriptPath . '" "' . $tmpHtml . '" "' . $tmpPdf . '" 2>&1';
+        $output = shell_exec($cmd);
+
+        if (file_exists($tmpPdf) && filesize($tmpPdf) > 0) {
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="SickLeave_' . $scFile . '.pdf"');
+            header('Content-Length: ' . filesize($tmpPdf));
+            header('Cache-Control: no-cache, no-store, must-revalidate');
+            readfile($tmpPdf);
+            @unlink($tmpHtml);
+            @unlink($tmpPdf);
+            exit;
+        }
+        // إذا فشل WeasyPrint، نكمل بوضع المعاينة
+        @unlink($tmpHtml);
+    }
+
     header('Content-Type: text/html; charset=utf-8');
     ?>
 <!DOCTYPE html>
@@ -510,11 +624,34 @@ body { font-weight: 400; color: #191818; background: #FBFAF9; overflow-x: hidden
   a { color: rgba(20, 0, 255, 1) !important; text-decoration: underline !important; }
 }
 </style>
+<script>
+function downloadPDF() {
+  var btn = document.getElementById('btnDownloadPDF');
+  btn.textContent = 'جاري التحميل...';
+  btn.disabled = true;
+  var url = window.location.href;
+  if (url.indexOf('pdf_mode=') > -1) {
+    url = url.replace(/pdf_mode=[^&]*/, 'pdf_mode=download');
+  } else {
+    url += (url.indexOf('?') > -1 ? '&' : '?') + 'pdf_mode=download';
+  }
+  // إزالة autoprint من الرابط إن وجد
+  url = url.replace(/[&?]autoprint=\d/, '');
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { btn.textContent = 'تحميل ملف PDF'; btn.disabled = false; }, 3000);
+}
+</script>
 </head>
 <body>
 <div class="controls">
-  <button class="download-btn" onclick="window.print()">🖨️ طباعة / تحميل PDF</button>
-  <button class="download-btn" style="background-color:#2c3e77" onclick="history.back()">← رجوع</button>
+  <button id="btnDownloadPDF" class="download-btn" onclick="downloadPDF()">تحميل ملف PDF</button>
+  <button class="download-btn" style="background-color:#2c3e77" onclick="window.print()">طباعة مباشرة</button>
+  <button class="download-btn" style="background-color:#475569" onclick="history.back()">← رجوع</button>
 </div>
 <div class="group1-container1">
   <div class="group1-thq-group1-elm" id="report-content">
@@ -826,6 +963,23 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
     <span>بوابة المرضى</span>
   </div>
   <div class="user-info">
+    <!-- زر الإشعارات -->
+    <div style="position:relative;">
+      <button id="notifBell" onclick="toggleNotifPanel()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;position:relative;transition:all 0.3s;">
+        🔔
+        <span id="notifBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;font-weight:700;align-items:center;justify-content:center;"></span>
+      </button>
+      <!-- لوحة الإشعارات -->
+      <div id="notifPanel" style="display:none;position:absolute;top:50px;left:0;width:320px;background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,0.3);z-index:999;overflow:hidden;border:1px solid #e2e8f0;">
+        <div style="padding:14px 16px;background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-weight:700;font-size:14px;">🔔 الإشعارات</span>
+          <button onclick="markAllRead()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif;">تحديد كمقروء</button>
+        </div>
+        <div id="notifList" style="max-height:300px;overflow-y:auto;padding:8px 0;">
+          <div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;">جاري التحميل...</div>
+        </div>
+      </div>
+    </div>
     <div class="user-badge">
       <span>👤</span>
       <span><?= htmlspecialchars($_SESSION['patient_display_name']) ?></span>
@@ -1032,13 +1186,23 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
       <div class="empty-state">
         <div class="empty-icon">🚫</div>
         <h4>لا يمكن إنشاء إجازة مرضية</h4>
-        <p>
+        <p style="margin-bottom:20px;">
           <?php if ($allowedDays === 0): ?>
-            لم يتم تخصيص أيام إجازة لحسابك بعد. يرجى التواصل مع الإدارة.
+            لم يتم تخصيص أيام إجازة لحسابك بعد. يرجى التواصل مع الإدارة لطلب إجازات إضافية.
           <?php else: ?>
-            لقد استنفدت جميع أيام الإجازة المسموحة (<?= $allowedDays ?> يوم).
+            لقد استنفدت جميع أيام الإجازة المسموحة (<?= $allowedDays ?> يوم). لطلب إجازات إضافية يرجى التواصل معنا.
           <?php endif; ?>
         </p>
+        <a href="https://wa.me/966573436223" target="_blank"
+           style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;padding:14px 28px;border-radius:12px;font-size:16px;font-weight:700;text-decoration:none;box-shadow:0 4px 16px rgba(37,211,102,0.4);transition:all 0.3s;"
+           onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(37,211,102,0.5)'"
+           onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 16px rgba(37,211,102,0.4)'">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+          تواصل معنا على واتساب لطلب إجازات إضافية
+        </a>
+        <p style="margin-top:12px;font-size:12px;color:#94a3b8;">اضغط على الزر أعلاه للتواصل المباشر عبر واتساب</p>
       </div>
     </div>
   </div>
@@ -1200,7 +1364,7 @@ function createLeave() {
       if (data.success) {
         showToast('✅ ' + data.message + ' — رمز الإجازة: ' + data.service_code, 'success');
         setTimeout(() => {
-          // فتح PDF مباشرة ثم إعادة تحميل الصفحة
+          // فتح صفحة PDF مع زر التحميل
           window.open('user.php?action=generate_pdf&leave_id=' + data.leave_id, '_blank');
           setTimeout(() => location.reload(), 1000);
         }, 1500);
@@ -1231,6 +1395,84 @@ function showToast(msg, type = 'success') {
     setTimeout(() => toast.remove(), 300);
   }, 5000);
 }
+
+// ===== نظام الإشعارات =====
+let notifPanelOpen = false;
+
+function toggleNotifPanel() {
+  const panel = document.getElementById('notifPanel');
+  notifPanelOpen = !notifPanelOpen;
+  panel.style.display = notifPanelOpen ? 'block' : 'none';
+  if (notifPanelOpen) loadNotifications();
+}
+
+// إغلاق اللوحة عند النقر خارجها
+document.addEventListener('click', function(e) {
+  const bell = document.getElementById('notifBell');
+  const panel = document.getElementById('notifPanel');
+  if (panel && bell && !bell.contains(e.target) && !panel.contains(e.target)) {
+    panel.style.display = 'none';
+    notifPanelOpen = false;
+  }
+});
+
+async function loadNotifications() {
+  try {
+    const res = await fetch('user.php?action=get_user_notifications');
+    const data = await res.json();
+    if (data.success) {
+      const list = document.getElementById('notifList');
+      const badge = document.getElementById('notifBadge');
+      if (data.unread_count > 0) {
+        badge.style.display = 'flex';
+        badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
+      } else {
+        badge.style.display = 'none';
+      }
+      if (!data.notifications || data.notifications.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;">لا توجد إشعارات</div>';
+        return;
+      }
+      list.innerHTML = data.notifications.map(n => `
+        <div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;background:${n.is_read == 0 ? '#eff6ff' : '#fff'};transition:background 0.3s;">
+          <div style="font-size:13px;font-weight:${n.is_read == 0 ? '700' : '400'};color:#1e293b;line-height:1.5;">${escapeHtml(n.message)}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:4px;">${n.created_at}</div>
+        </div>
+      `).join('');
+    }
+  } catch(e) {}
+}
+
+async function markAllRead() {
+  try {
+    const fd = new FormData();
+    fd.append('action', 'mark_user_notifications_read');
+    await fetch('user.php', { method: 'POST', body: fd });
+    document.getElementById('notifBadge').style.display = 'none';
+    loadNotifications();
+  } catch(e) {}
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// تحميل عدد الإشعارات غير المقروءة عند فتح الصفحة
+(async function() {
+  try {
+    const res = await fetch('user.php?action=get_user_notifications');
+    const data = await res.json();
+    if (data.success && data.unread_count > 0) {
+      const badge = document.getElementById('notifBadge');
+      if (badge) {
+        badge.style.display = 'flex';
+        badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
+      }
+    }
+  } catch(e) {}
+})();
 </script>
 
 <?php endif; ?>
