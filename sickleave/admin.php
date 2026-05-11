@@ -11181,27 +11181,40 @@ setupSelectQuickSearch('batch_hospital_search', 'batch_hospital_id');
         if (url) { const testImg = new Image(); testImg.onload = () => showLogoPreview(url); testImg.onerror = () => {}; testImg.src = url; }
     });
 
- // ====== التقاط أحداث أزرار المستشفيات (تعديل وحذف) عبر Event Delegation ======
-    hospitalsTable?.addEventListener('click', (e) => {
+// ====== التقاط أحداث أزرار المستشفيات (تعديل وحذف) عبر Event Delegation على مستوى المستند ======
+    document.addEventListener('click', (e) => {
         const editBtn = e.target.closest('.btn-edit-hospital');
         const delBtn = e.target.closest('.btn-delete-hospital');
         
         // 1. معالجة زر التعديل
         if (editBtn) {
+            e.preventDefault();
+            
             const hid = editBtn.dataset.id || '';
-            if (document.getElementById('edit_hospital_id')) document.getElementById('edit_hospital_id').value = hid;
-            if (document.getElementById('edit_hospital_name_ar')) document.getElementById('edit_hospital_name_ar').value = editBtn.dataset.nameAr || '';
-            if (document.getElementById('edit_hospital_name_en')) document.getElementById('edit_hospital_name_en').value = editBtn.dataset.nameEn || '';
-            if (document.getElementById('edit_hospital_license')) document.getElementById('edit_hospital_license').value = editBtn.dataset.license || '';
-            if (document.getElementById('edit_hospital_prefix')) document.getElementById('edit_hospital_prefix').value = editBtn.dataset.prefix || 'GSL';
-            if (document.getElementById('edit_hospital_logo_url')) document.getElementById('edit_hospital_logo_url').value = '';
-            if (document.getElementById('edit_hospital_logo_file')) document.getElementById('edit_hospital_logo_file').value = '';
+            const elId = document.getElementById('edit_hospital_id');
+            const elNameAr = document.getElementById('edit_hospital_name_ar');
+            const elNameEn = document.getElementById('edit_hospital_name_en');
+            const elLicense = document.getElementById('edit_hospital_license');
+            const elPrefix = document.getElementById('edit_hospital_prefix');
+            const elLogoUrl = document.getElementById('edit_hospital_logo_url');
+            const elLogoFile = document.getElementById('edit_hospital_logo_file');
+            
+            if (elId) elId.value = hid;
+            if (elNameAr) elNameAr.value = editBtn.dataset.nameAr || '';
+            if (elNameEn) elNameEn.value = editBtn.dataset.nameEn || '';
+            if (elLicense) elLicense.value = editBtn.dataset.license || '';
+            if (elPrefix) elPrefix.value = editBtn.dataset.prefix || 'GSL';
+            if (elLogoUrl) elLogoUrl.value = '';
+            if (elLogoFile) elLogoFile.value = '';
             
             // تحميل إعدادات إزاحة وتكبير الشعار المحفوظة للمستشفى
             logoScale = parseFloat(editBtn.dataset.logoScale || 1);
             logoOffX = parseFloat(editBtn.dataset.logoOffsetX || 0);
             logoOffY = parseFloat(editBtn.dataset.logoOffsetY || 0);
-            if (typeof logoSlider !== 'undefined' && logoSlider) logoSlider.value = logoScale;
+            
+            const lSlider = document.getElementById('logoScaleSlider');
+            if (lSlider) lSlider.value = logoScale;
+            
             if (typeof updateLogoTransform === 'function') updateLogoTransform();
             
             const logoData = editBtn.dataset.logo || '';
@@ -11211,7 +11224,7 @@ setupSelectQuickSearch('batch_hospital_search', 'batch_hospital_id');
                 }
             } else if (logoData && logoData.startsWith('http')) {
                 if (typeof showLogoPreview === 'function') showLogoPreview(logoData);
-                if (document.getElementById('edit_hospital_logo_url')) document.getElementById('edit_hospital_logo_url').value = logoData;
+                if (elLogoUrl) elLogoUrl.value = logoData;
             } else {
                 const previewImg = document.getElementById('edit_hospital_logo_preview');
                 if (previewImg) previewImg.src = '';
@@ -11227,6 +11240,8 @@ setupSelectQuickSearch('batch_hospital_search', 'batch_hospital_id');
         
         // 2. معالجة زر الحذف
         if (delBtn) {
+            e.preventDefault();
+            
             const hid = delBtn.dataset.id;
             const confirmMsgEl = document.getElementById('confirmMessage');
             const confirmYesEl = document.getElementById('confirmYesBtn');
@@ -11265,6 +11280,7 @@ setupSelectQuickSearch('batch_hospital_search', 'batch_hospital_id');
             }
         }
     });
+
     // حفظ تعديل المستشفى
     document.getElementById('saveEditHospital')?.addEventListener('click', async () => {
         showLoading();
@@ -11276,7 +11292,12 @@ setupSelectQuickSearch('batch_hospital_search', 'batch_hospital_id');
             const result = await res.json();
             if (result.success) {
                 showToast(result.message, 'success');
-                editHospitalModal.hide();
+                if (typeof editHospitalModal !== 'undefined' && editHospitalModal) {
+                    editHospitalModal.hide();
+                } else {
+                    const modalEl = document.getElementById('editHospitalModal');
+                    if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+                }
                 if (result.hospitals) { currentTableData.hospitals = result.hospitals; renderHospitals(); updateHospitalSelects(); }
                 await fetchAllLeaves();
             } else { showToast(result.message || 'تعذّر تعديل المستشفى.', 'danger'); }
@@ -11286,7 +11307,6 @@ setupSelectQuickSearch('batch_hospital_search', 'batch_hospital_id');
             hideLoading();
         }
     });
-
     // ====== ربط المستشفى بالأطباء + البادئة ======
     document.getElementById('hospital_id')?.addEventListener('change', function() {
         const opt = this.options[this.selectedIndex];
