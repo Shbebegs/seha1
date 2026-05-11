@@ -2,7 +2,7 @@
 /**
  * بوابة المرضى - user.php
  * المرضى يُنشئون إجازات مرضية حقيقية بنفس قالب لوحة التحكم
- * (نسخة مطورة بتصميم احترافي + Dark Mode + بقاء بنفس الصفحة)
+ * (نسخة مطورة بتصميم احترافي + Dark Mode + متوافقة بالكامل مع جميع الأجهزة)
  */
 
 ini_set('session.use_only_cookies', '1');
@@ -405,7 +405,7 @@ if ($action === 'create_sick_leave' && isPatientLoggedIn()) {
     exit;
 }
 
-// توليد PDF للإجازة (نفس قالب لوحة التحكم)
+// توليد PDF للإجازة (قالب مخصص بدقة للطباعة)
 if ($action === 'generate_pdf' && isPatientLoggedIn()) {
     $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']) . '/';
     $leaveId = (int)($_GET['leave_id'] ?? 0);
@@ -743,7 +743,6 @@ a { color: inherit; text-decoration: inherit; }
 .en-spaced { letter-spacing: 0.3px; }
 :root { --footer-offset: 40px; }
 
-/* Updates applied down here */
 .group1-thq-staticinfo-elm { top: 125px; left: 36.65px; width: 768.35px; height: 811.91px; display: flex; position: absolute; align-items: flex-start; pointer-events: none; }
 .top-right-placeholder { position: absolute; top: 36px; left: 543.36px; width: 262.43px; height: 107.22px; display: flex; align-items: center; justify-content: center; font-size: 14px; z-index: 5; }
 .top-left-placeholder { position: absolute; top: 36px; left: 36px; width: 149.96px; height: 65.98px; display: flex; align-items: center; justify-content: center; font-size: 14px; z-index: 5; }
@@ -764,13 +763,13 @@ a { color: inherit; text-decoration: inherit; }
 .vertical-divider { position: absolute; top: 735px; left: 431px; width: 1px; height: 6.8cm; background-color: #dddddd; }
 .thin-slash { font-weight: 300; font-family: "Inter", sans-serif; margin: 0 3px; display: inline-block; }
 .controls { position: fixed; bottom: 30px; right: 30px; display: flex; gap: 15px; z-index: 1000; }
-.download-btn { background-color: #306db5; color: white; padding: 14px 28px; border-radius: 10px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0px 6px 15px rgba(0,0,0,0.3); font-family: "Inter", sans-serif; transition: all 0.3s; }
-.download-btn:hover { background-color: #2c3e77; transform: translateY(-3px); }
+.download-btn { background-color: #0d9488; color: white; padding: 14px 28px; border-radius: 12px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0px 6px 20px rgba(13,148,136,0.3); font-family: "Inter", sans-serif; transition: all 0.3s; }
+.download-btn:hover { background-color: #0f766e; transform: translateY(-3px); }
 @media screen and (max-width: 880px) {
   .group1-container1 { padding-top: 10px; padding-bottom: 10px; }
   .group1-thq-group1-elm { transform-origin: top center; transform: scale(calc(100vw / 860)); margin-bottom: calc(1190.25px * (100vw / 860) - 1190.25px); }
   .controls { bottom: 15px; right: 15px; left: 15px; justify-content: center; }
-  .download-btn { width: 100%; text-align: center; font-size: 18px; padding: 16px; }
+  .download-btn { width: 100%; text-align: center; font-size: 16px; padding: 14px; }
 }
 @media print {
   @page { size: 842.25px 1190.25px; margin: 0; }
@@ -797,8 +796,8 @@ function downloadPDF() {
 <body>
 <div class="controls">
   <button id="btnDownloadPDF" class="download-btn" onclick="downloadPDF()">تحميل ملف PDF</button>
-  <button class="download-btn" style="background-color:#2c3e77" onclick="window.print()">طباعة مباشرة</button>
-  <button class="download-btn" style="background-color:#475569" onclick="history.back()">← رجوع</button>
+  <button class="download-btn" style="background-color:#1e293b;box-shadow:0px 6px 20px rgba(0,0,0,0.2);" onclick="window.print()">طباعة مباشرة</button>
+  <button class="download-btn" style="background-color:#64748b;box-shadow:none;" onclick="history.back()">← رجوع</button>
 </div>
 <div class="group1-container1">
   <div class="group1-thq-group1-elm" id="report-content">
@@ -808,8 +807,8 @@ function downloadPDF() {
     <div class="group1-thq-staticinfo-elm">
       <div class="header-placeholder"><img src="<?= $baseUrl ?>header.png" alt="" style="width:100%;height:100%;" onerror="this.style.display='none'" /></div>
       <span class="group1-thq-text-elm41">
-        <span style="font-size:22.5px;font-family:'Noto Sans Arabic',sans-serif;font-weight:700;color:#306db5;">تقرير إجازة مرضية</span><br/>
-        <span style="font-size:18.7px;font-family:'Times New Roman',serif;font-weight:700;color:#2c3e77;">Sick Leave Report</span>
+        <span style="font-size:22.5px;font-family:'Noto Sans Arabic',sans-serif;font-weight:700;color:#0d9488;">تقرير إجازة مرضية</span><br/>
+        <span style="font-size:18.7px;font-family:'Times New Roman',serif;font-weight:700;color:#1e293b;">Sick Leave Report</span>
       </span>
       <span class="group1-thq-text-elm44">Kingdom of Saudi Arabia</span>
       <div class="placeholder-136"><img src="<?= $baseUrl ?>qr.svg" alt="QR" style="width:130px;height:130px;" onerror="this.style.display='none'" /></div>
@@ -910,16 +909,17 @@ if (isPatientLoggedIn()) {
 })();
 </script>
 <style>
-/* ================= المتغيرات والألوان (نظام احترافي) ================= */
+/* ================= المتغيرات والألوان (نظام طبي فخم واحترافي) ================= */
 :root {
-  --primary: #1e40af;
-  --primary-light: #3b82f6;
-  --primary-glow: rgba(59,130,246,0.25);
-  --secondary: #0f172a;
-  --accent: #06b6d4;
+  --primary: #0d9488;
+  --primary-light: #14b8a6;
+  --primary-dark: #0f766e;
+  --primary-glow: rgba(13, 148, 136, 0.12);
+  --secondary: #1e293b;
+  --accent: #0284c7;
   --success: #10b981;
-  --success-bg: #d1fae5;
-  --success-text: #059669;
+  --success-bg: #ecfdf5;
+  --success-text: #065f46;
   --warning: #f59e0b;
   --danger: #ef4444;
   --bg: #f8fafc;
@@ -928,22 +928,25 @@ if (isPatientLoggedIn()) {
   --text-muted: #64748b;
   --border: #e2e8f0;
   --input-bg: #f1f5f9;
-  --table-hdr: #f1f5f9;
-  --table-hover: #f8faff;
+  --table-hdr: #f8fafc;
+  --table-hover: #f1f5f9;
   --radius: 16px;
   --radius-lg: 24px;
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
   --shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 12px 40px rgba(30, 64, 175, 0.08);
+  --shadow-lg: 0 12px 35px rgba(13, 148, 136, 0.08);
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --nav-bg: linear-gradient(135deg, #0f172a, #1e3a8a);
+  --nav-bg: rgba(255, 255, 255, 0.85);
+  --nav-border: #e2e8f0;
 }
 
 [data-theme="dark"] {
-  --primary: #3b82f6;
-  --primary-light: #60a5fa;
-  --primary-glow: rgba(96,165,250,0.15);
+  --primary: #14b8a6;
+  --primary-light: #2dd4bf;
+  --primary-dark: #0d9488;
+  --primary-glow: rgba(20, 184, 166, 0.15);
   --secondary: #f8fafc;
-  --bg: #0b0f19;
+  --bg: #090d16;
   --card: #111827;
   --text: #f1f5f9;
   --text-muted: #94a3b8;
@@ -951,136 +954,139 @@ if (isPatientLoggedIn()) {
   --input-bg: #1f2937;
   --table-hdr: #1f2937;
   --table-hover: #161f33;
-  --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.4);
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.7);
   --success-bg: rgba(16, 185, 129, 0.15);
   --success-text: #34d399;
-  --nav-bg: linear-gradient(135deg, #05070c, #0f172a);
+  --nav-bg: rgba(17, 24, 39, 0.85);
+  --nav-border: #1f2937;
 }
 
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; direction:rtl; transition: background-color 0.4s ease, color 0.4s ease; }
+body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; direction:rtl; transition: background-color 0.4s ease, color 0.4s ease; -webkit-font-smoothing: antialiased; }
 
-/* ═══ صفحة تسجيل الدخول ═══ */
+/* ═══ صفحة تسجيل الدخول (تصميم فخم ومتجاوب) ═══ */
 .login-page {
   min-height:100vh; display:flex; align-items:center; justify-content:center;
-  background:linear-gradient(-45deg,#0f172a,#1e3a8a,#1e40af,#0c4a6e,#0f172a);
+  background:linear-gradient(-45deg, #0f172a, #0d9488, #0f766e, #0284c7, #0f172a);
   background-size:400% 400%; animation:gradientShift 15s ease infinite;
   padding:20px; position:relative; overflow:hidden;
 }
 .login-card {
-  background:var(--card); backdrop-filter:blur(30px);
+  background:var(--card); 
   border-radius:var(--radius-lg); padding:48px 40px; width:100%; max-width:440px;
-  box-shadow:0 40px 100px rgba(0,0,0,0.5); animation:slideUp 0.7s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow:0 20px 60px rgba(0,0,0,0.4); animation:slideUp 0.6s cubic-bezier(0.34,1.56,0.64,1);
   border:1px solid var(--border); position:relative; z-index:2;
 }
-.login-icon { text-align:center; font-size:64px; margin-bottom:16px; animation:float 4s ease-in-out infinite; }
+.login-icon { text-align:center; font-size:56px; margin-bottom:16px; animation:float 4s ease-in-out infinite; display:block; }
 .login-card h2 { text-align:center; font-size:26px; font-weight:800; color:var(--primary); margin-bottom:6px; }
-.login-card .subtitle { text-align:center; color:var(--text-muted); font-size:14px; margin-bottom:32px; }
-.form-group { margin-bottom:18px; }
-.form-group label { display:block; font-size:13px; font-weight:600; color:var(--text); margin-bottom:8px; }
+.login-card .subtitle { text-align:center; color:var(--text-muted); font-size:14px; margin-bottom:32px; font-weight:500; }
+.form-group { margin-bottom:20px; }
+.form-group label { display:block; font-size:13px; font-weight:700; color:var(--text); margin-bottom:8px; }
 .form-control {
-  width:100%; padding:12px 16px; border:2px solid var(--border); border-radius:12px;
-  font-family:'Cairo',sans-serif; font-size:15px; color:var(--text); background:var(--input-bg);
-  transition:var(--transition); outline:none;
+  width:100%; padding:14px 18px; border:2px solid var(--border); border-radius:12px;
+  font-family:'Cairo',sans-serif; font-size:15px; color:var(--text); background:var(--input-bg); font-weight:600;
+  transition:var(--transition); outline:none; box-shadow:var(--shadow-sm);
 }
 .form-control:focus { border-color:var(--primary-light); background:var(--card); box-shadow:0 0 0 4px var(--primary-glow); }
 
 .btn {
   display:inline-flex; align-items:center; justify-content:center; gap:8px;
-  padding:12px 24px; border:none; border-radius:12px; font-family:'Cairo',sans-serif;
+  padding:14px 28px; border:none; border-radius:12px; font-family:'Cairo',sans-serif;
   font-size:15px; font-weight:700; cursor:pointer; transition:var(--transition); text-decoration:none;
 }
-.btn-primary { background:linear-gradient(135deg, #1e40af, var(--primary-light)); color:#fff; box-shadow:0 4px 16px var(--primary-glow); }
-.btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 24px var(--primary-glow); filter: brightness(1.1); }
+.btn-primary { background:linear-gradient(135deg, var(--primary-dark), var(--primary-light)); color:#fff; box-shadow:0 6px 20px var(--primary-glow); }
+.btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 25px var(--primary-glow); filter: brightness(1.05); }
 .btn-full { width:100%; }
 
-.alert { padding:12px 16px; border-radius:12px; font-size:14px; font-weight:600; margin-bottom:16px; }
+.alert { padding:14px 18px; border-radius:12px; font-size:14px; font-weight:700; margin-bottom:20px; line-height: 1.5; }
 .alert-danger { background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid rgba(239, 68, 68, 0.2); }
 .alert-success { background:var(--success-bg); color:var(--success-text); border:1px solid rgba(16, 185, 129, 0.2); }
 .alert-warning { background:rgba(245, 158, 11, 0.1); color:var(--warning); border:1px solid rgba(245, 158, 11, 0.2); }
 
-/* ═══ الشريط العلوي ═══ */
+/* ═══ الشريط العلوي (Navbar فخم وزجاجي) ═══ */
 .navbar {
-  background:var(--nav-bg); padding:14px 28px;
+  background:var(--nav-bg); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+  padding:14px 28px; border-bottom:1px solid var(--nav-border);
   display:flex; align-items:center; justify-content:space-between;
-  box-shadow:0 4px 24px rgba(0,0,0,0.3); position:sticky; top:0; z-index:100;
+  box-shadow:0 4px 30px rgba(0,0,0,0.03); position:sticky; top:0; z-index:100;
   transition: var(--transition);
 }
-.navbar .brand { display:flex; align-items:center; gap:12px; color:#fff; font-size:18px; font-weight:800; }
-.navbar .brand-icon { width:40px; height:40px; background:linear-gradient(135deg,var(--primary-light),var(--accent)); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; }
+.navbar .brand { display:flex; align-items:center; gap:12px; color:var(--text); font-size:18px; font-weight:800; }
+.navbar .brand-icon { width:42px; height:42px; background:linear-gradient(135deg, var(--primary), var(--primary-light)); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:0 4px 12px var(--primary-glow); }
 .navbar .user-actions { display:flex; align-items:center; gap:12px; }
-.navbar .user-badge { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); padding:6px 14px; border-radius:50px; display:flex; align-items:center; gap:8px; color:#fff; font-size:14px; font-weight:600; }
-.btn-icon-nav { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; width:40px; height:40px; border-radius:12px; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; transition:var(--transition); }
-.btn-icon-nav:hover { background:rgba(255,255,255,0.2); transform: scale(1.05); }
+.navbar .user-badge { background:var(--input-bg); border:1px solid var(--border); padding:8px 16px; border-radius:50px; display:flex; align-items:center; gap:8px; color:var(--text); font-size:14px; font-weight:700; transition:var(--transition); }
+.btn-icon-nav { background:var(--input-bg); border:1px solid var(--border); color:var(--text); width:42px; height:42px; border-radius:12px; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; transition:var(--transition); box-shadow:var(--shadow-sm); }
+.btn-icon-nav:hover { background:var(--border); transform: scale(1.05); }
 
-.btn-logout { background:rgba(239,68,68,0.15); color:#fca5a5; border:1px solid rgba(239,68,68,0.3); padding:8px 16px; border-radius:12px; font-family:'Cairo',sans-serif; font-size:13px; font-weight:700; cursor:pointer; transition:var(--transition); }
-.btn-logout:hover { background:rgba(239,68,68,0.4); color:#fff; }
+.btn-logout { background:rgba(239,68,68,0.1); color:var(--danger); border:1px solid rgba(239,68,68,0.2); padding:10px 18px; border-radius:12px; font-family:'Cairo',sans-serif; font-size:14px; font-weight:700; cursor:pointer; transition:var(--transition); }
+.btn-logout:hover { background:var(--danger); color:#fff; box-shadow:0 4px 15px rgba(239,68,68,0.2); }
 
-/* ═══ المحتوى ═══ */
-.main-content { max-width:1150px; margin:0 auto; padding:32px 20px; }
-.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:20px; margin-bottom:32px; }
-.stat-card { background:var(--card); border-radius:var(--radius); padding:20px 24px; box-shadow:var(--shadow); border:1px solid var(--border); display:flex; align-items:center; gap:16px; transition:var(--transition); }
+/* ═══ المحتوى الرئيسي متجاوب بالكامل ═══ */
+.main-content { max-width:1200px; margin:0 auto; padding:36px 20px; }
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:20px; margin-bottom:36px; }
+.stat-card { background:var(--card); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow); border:1px solid var(--border); display:flex; align-items:center; gap:18px; transition:var(--transition); }
 .stat-card:hover { transform:translateY(-4px); box-shadow:var(--shadow-lg); border-color: var(--primary-light); }
-.stat-icon { width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:26px; flex-shrink:0; }
-.stat-icon.blue { background:rgba(59, 130, 246, 0.15); color:#3b82f6; }
-.stat-icon.green { background:rgba(16, 185, 129, 0.15); color:#10b981; }
-.stat-icon.orange { background:rgba(245, 158, 11, 0.15); color:#f59e0b; }
-.stat-icon.red { background:rgba(239, 68, 68, 0.15); color:#ef4444; }
-.stat-info .num { font-size:30px; font-weight:800; color:var(--text); line-height:1; }
-.stat-info .label { font-size:13px; color:var(--text-muted); margin-top:6px; font-weight:600; }
+.stat-icon { width:60px; height:60px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0; font-weight:bold; }
+.stat-icon.blue { background:rgba(2, 132, 199, 0.12); color:#0284c7; }
+.stat-icon.green { background:rgba(16, 185, 129, 0.12); color:#10b981; }
+.stat-icon.orange { background:rgba(245, 158, 11, 0.12); color:#f59e0b; }
+.stat-icon.red { background:rgba(239, 68, 68, 0.12); color:#ef4444; }
+.stat-info .num { font-size:32px; font-weight:800; color:var(--text); line-height:1; }
+.stat-info .label { font-size:13px; color:var(--text-muted); margin-top:8px; font-weight:700; }
 
-.card { background:var(--card); border-radius:var(--radius-lg); box-shadow:var(--shadow); border:1px solid var(--border); overflow:hidden; margin-bottom:28px; transition:var(--transition); }
-.card-header { padding:20px 28px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--table-hdr); }
-.card-header h3 { font-size:18px; font-weight:700; color:var(--primary); display:flex; align-items:center; gap:10px; }
-.card-body { padding:28px; }
+.card { background:var(--card); border-radius:var(--radius-lg); box-shadow:var(--shadow); border:1px solid var(--border); overflow:hidden; margin-bottom:32px; transition:var(--transition); }
+.card-header { padding:22px 28px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; background:var(--table-hdr); }
+.card-header h3 { font-size:18px; font-weight:800; color:var(--primary); display:flex; align-items:center; gap:10px; }
+.card-body { padding:32px; }
 
-.patient-info-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; }
-.info-field { background:var(--input-bg); border:1px solid var(--border); border-radius:12px; padding:14px 18px; transition:var(--transition); }
+.patient-info-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px; }
+.info-field { background:var(--input-bg); border:1px solid var(--border); border-radius:14px; padding:16px 20px; transition:var(--transition); box-shadow:var(--shadow-sm); }
 .info-field:hover { border-color: var(--text-muted); }
-.info-field .field-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; }
+.info-field .field-label { font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:block; }
 .info-field .field-value { font-size:16px; font-weight:700; color:var(--text); }
-.info-field .field-value-en { font-size:12px; color:var(--text-muted); direction:ltr; text-align:left; margin-top:2px; font-family: 'Inter', sans-serif; }
+.info-field .field-value-en { font-size:13px; color:var(--text-muted); direction:ltr; text-align:left; margin-top:4px; font-family: 'Inter', sans-serif; font-weight:500; }
 
-.quota-bar-wrap { background:var(--input-bg); border-radius:50px; height:14px; overflow:hidden; margin:12px 0; border:1px solid var(--border); }
-.quota-bar { height:100%; border-radius:50px; background:linear-gradient(90deg,var(--success),#34d399); transition:width 1s cubic-bezier(0.4, 0, 0.2, 1); }
-.quota-bar.warning { background:linear-gradient(90deg,var(--warning),#fbbf24); }
-.quota-bar.danger { background:linear-gradient(90deg,var(--danger),#f87171); }
+.quota-bar-wrap { background:var(--input-bg); border-radius:50px; height:16px; overflow:hidden; margin:14px 0; border:1px solid var(--border); box-shadow:inset 0 2px 4px rgba(0,0,0,0.05); }
+.quota-bar { height:100%; border-radius:50px; background:linear-gradient(90deg, var(--success), #34d399); transition:width 1s cubic-bezier(0.4, 0, 0.2, 1); }
+.quota-bar.warning { background:linear-gradient(90deg, var(--warning), #fbbf24); }
+.quota-bar.danger { background:linear-gradient(90deg, var(--danger), #f87171); }
 
-.leave-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.leave-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
 @media (max-width:768px) { .leave-form-grid { grid-template-columns:1fr; } }
-.form-label { display:block; font-size:13px; font-weight:700; color:var(--text); margin-bottom:8px; }
-.form-select { width:100%; padding:12px 16px; border:2px solid var(--border); border-radius:12px; font-family:'Cairo',sans-serif; font-size:14px; color:var(--text); background:var(--input-bg); transition:var(--transition); outline:none; cursor:pointer; font-weight:600; }
+.form-label { display:block; font-size:14px; font-weight:800; color:var(--text); margin-bottom:10px; }
+.form-select { width:100%; padding:14px 18px; border:2px solid var(--border); border-radius:12px; font-family:'Cairo',sans-serif; font-size:15px; color:var(--text); background:var(--input-bg); transition:var(--transition); outline:none; cursor:pointer; font-weight:700; box-shadow:var(--shadow-sm); }
 .form-select:focus { border-color:var(--primary-light); background:var(--card); box-shadow:0 0 0 4px var(--primary-glow); }
-.form-select option { background: var(--card); color: var(--text); }
+.form-select option { background: var(--card); color: var(--text); font-weight:600; }
 
-.time-mode-tabs { display:flex; gap:8px; margin-bottom:12px; }
-.time-tab { flex:1; padding:10px; border:2px solid var(--border); border-radius:10px; background:var(--input-bg); font-family:'Cairo',sans-serif; font-size:13px; font-weight:700; cursor:pointer; transition:var(--transition); text-align:center; color:var(--text-muted); }
-.time-tab.active { border-color:var(--primary-light); background:var(--primary-glow); color:var(--primary); }
+.time-mode-tabs { display:flex; gap:10px; margin-bottom:14px; }
+.time-tab { flex:1; padding:12px; border:2px solid var(--border); border-radius:12px; background:var(--input-bg); font-family:'Cairo',sans-serif; font-size:14px; font-weight:800; cursor:pointer; transition:var(--transition); text-align:center; color:var(--text-muted); box-shadow:var(--shadow-sm); }
+.time-tab.active { border-color:var(--primary); background:var(--primary-glow); color:var(--primary); }
 .time-tab:hover:not(.active) { border-color:var(--text-muted); }
 
-.leaves-table { width:100%; border-collapse:collapse; font-size:14px; }
-.leaves-table th { background:var(--table-hdr); padding:14px 16px; text-align:right; font-weight:700; color:var(--text-muted); font-size:12px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid var(--border); }
-.leaves-table td { padding:16px; border-bottom:1px solid var(--border); vertical-align:middle; color:var(--text); font-weight:600; }
+.leaves-table { width:100%; border-collapse:collapse; font-size:15px; }
+.leaves-table th { background:var(--table-hdr); padding:16px 20px; text-align:right; font-weight:800; color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid var(--border); white-space:nowrap; }
+.leaves-table td { padding:18px 20px; border-bottom:1px solid var(--border); vertical-align:middle; color:var(--text); font-weight:600; }
 .leaves-table tr:hover td { background:var(--table-hover); }
 
-.btn-sm { padding:8px 16px; font-size:13px; border-radius:10px; }
-.btn-outline { background:transparent; border:2px solid var(--primary-light); color:var(--primary); font-weight:700; }
-.btn-outline:hover { background:var(--primary-light); color:#fff; border-color:var(--primary-light); }
+.btn-sm { padding:10px 18px; font-size:14px; border-radius:10px; }
+.btn-outline { background:transparent; border:2px solid var(--primary-light); color:var(--primary); font-weight:800; box-shadow:none; }
+.btn-outline:hover { background:var(--primary); color:#fff; border-color:var(--primary); box-shadow:0 4px 15px var(--primary-glow); }
 
-.toast-container { position:fixed; top:90px; left:50%; transform:translateX(-50%); z-index:9999; display:flex; flex-direction:column; gap:12px; pointer-events:none; }
-.toast { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px 24px; box-shadow:0 20px 50px rgba(0,0,0,0.3); font-size:15px; font-weight:700; display:flex; align-items:center; gap:12px; min-width:320px; max-width:450px; animation:slideDown 0.4s cubic-bezier(0.34,1.56,0.64,1); border-right:5px solid var(--primary); color:var(--text); }
+.toast-container { position:fixed; top:90px; left:50%; transform:translateX(-50%); z-index:9999; display:flex; flex-direction:column; gap:12px; pointer-events:none; width:90%; max-width:450px; }
+.toast { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px 24px; box-shadow:0 20px 60px rgba(0,0,0,0.3); font-size:15px; font-weight:800; display:flex; align-items:center; gap:14px; width:100%; animation:slideDown 0.4s cubic-bezier(0.34,1.56,0.64,1); border-right:6px solid var(--primary); color:var(--text); backdrop-filter:blur(10px); }
 .toast.success { border-color:var(--success); }
 .toast.error { border-color:var(--danger); }
 .toast.warning { border-color:var(--warning); }
 
-.spinner { width:20px; height:20px; border:3px solid rgba(255,255,255,0.3); border-top-color:#fff; border-radius:50%; animation:spin 0.8s linear infinite; display:inline-block; vertical-align: middle; }
-.empty-state { text-align:center; padding:60px 20px; color:var(--text-muted); }
-.empty-state .empty-icon { font-size:64px; margin-bottom:16px; opacity:0.6; }
-.empty-state h4 { font-size:18px; font-weight:800; margin-bottom:8px; color:var(--text); }
-.empty-state p { font-size:14px; font-weight:600; }
+.spinner { width:22px; height:22px; border:3px solid rgba(255,255,255,0.3); border-top-color:#fff; border-radius:50%; animation:spin 0.8s linear infinite; display:inline-block; vertical-align: middle; }
+.empty-state { text-align:center; padding:70px 20px; color:var(--text-muted); }
+.empty-state .empty-icon { font-size:72px; margin-bottom:20px; opacity:0.8; display:block; }
+.empty-state h4 { font-size:20px; font-weight:800; margin-bottom:10px; color:var(--text); }
+.empty-state p { font-size:15px; font-weight:600; max-width:500px; margin:0 auto; line-height:1.6; }
 
-.days-counter { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--text-muted); margin-top:8px; }
+.days-counter { display:flex; align-items:center; gap:10px; font-size:14px; font-weight:800; color:var(--text-muted); margin-top:10px; flex-wrap:wrap; }
 .days-counter .used { color:var(--danger); }
 .days-counter .remaining { color:var(--success); }
 .days-counter .total { color:var(--primary); }
@@ -1092,10 +1098,20 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
 @keyframes spin { to{transform:rotate(360deg)} }
 
 /* لوحة الإشعارات */
-.notif-panel-box { background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.5); overflow:hidden; }
-.notif-item { padding:14px 18px; border-bottom:1px solid var(--border); transition:var(--transition); }
+.notif-panel-box { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:0 20px 70px rgba(0,0,0,0.6); overflow:hidden; }
+.notif-item { padding:16px 20px; border-bottom:1px solid var(--border); transition:var(--transition); }
 .notif-item:hover { background:var(--table-hover); }
-.notif-item.unread { background:var(--primary-glow); }
+.notif-item.unread { background:var(--primary-glow); border-right:4px solid var(--primary); }
+
+/* تحسين التجاوب لشاشات الهواتف */
+@media (max-width: 640px) {
+  .navbar { padding:12px 16px; }
+  .navbar .brand span { font-size:16px; }
+  .navbar .user-badge { display:none; }
+  .card-header { padding:18px 20px; }
+  .card-body { padding:20px; }
+  .leaves-table td, .leaves-table th { padding:12px 14px; font-size:14px; }
+}
 </style>
 </head>
 <body>
@@ -1103,7 +1119,7 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
 <?php if (!isPatientLoggedIn()): ?>
 <div class="login-page">
   <div class="login-card">
-    <div class="login-icon">🏥</div>
+    <span class="login-icon">🏥</span>
     <h2>بوابة المرضى</h2>
     <p class="subtitle">Patient Portal — سجّل دخولك للوصول إلى ملفك الطبي</p>
 
@@ -1133,7 +1149,7 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
         🔐 تسجيل الدخول
       </button>
     </form>
-    <p style="text-align:center;margin-top:24px;font-size:13px;color:var(--text-muted);font-weight:600;">
+    <p style="text-align:center;margin-top:28px;font-size:14px;color:var(--text-muted);font-weight:700;">
       للحصول على حساب، يرجى التواصل مع الإدارة
     </p>
   </div>
@@ -1154,16 +1170,16 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
     <div style="position:relative;">
       <button id="notifBell" class="btn-icon-nav" onclick="toggleNotifPanel()" title="الإشعارات" style="position:relative;">
         🔔
-        <span id="notifBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;font-weight:700;align-items:center;justify-content:center;"></span>
+        <span id="notifBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:20px;height:20px;font-size:11px;font-weight:800;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,0.3);"></span>
       </button>
       
-      <div id="notifPanel" class="notif-panel-box" style="display:none;position:absolute;top:54px;left:0;width:340px;z-index:999;">
-        <div style="padding:14px 18px;background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-weight:700;font-size:14px;">🔔 الإشعارات</span>
-          <button onclick="markAllRead()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:4px 10px;border-radius:8px;font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:700;">تحديد كمقروء</button>
+      <div id="notifPanel" class="notif-panel-box" style="display:none;position:absolute;top:58px;left:0;width:360px;z-index:999;">
+        <div style="padding:16px 20px;background:linear-gradient(135deg, var(--primary-dark), var(--primary));color:#fff;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-weight:800;font-size:15px;">🔔 الإشعارات</span>
+          <button onclick="markAllRead()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:6px 12px;border-radius:10px;font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:800;transition:var(--transition);">تحديد كمقروء</button>
         </div>
-        <div id="notifList" style="max-height:320px;overflow-y:auto;">
-          <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;font-weight:600;">جاري التحميل...</div>
+        <div id="notifList" style="max-height:350px;overflow-y:auto;">
+          <div style="text-align:center;padding:30px;color:var(--text-muted);font-size:14px;font-weight:700;">جاري التحميل...</div>
         </div>
       </div>
     </div>
@@ -1217,47 +1233,47 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
   <div class="card">
     <div class="card-header">
       <h3>👤 بياناتي الشخصية والوظيفية</h3>
-      <span style="font-size:12px;color:var(--text-muted);font-weight:700;background:var(--input-bg);padding:4px 12px;border-radius:8px;">هذه بياناتك للعرض فقط لاجراء اي تعديلات عليها تواصل معنا على الواتس</span>
+      <span style="font-size:13px;color:var(--text-muted);font-weight:800;background:var(--input-bg);padding:6px 14px;border-radius:10px;border:1px solid var(--border);">هذه بياناتك للعرض فقط، لإجراء أي تعديلات عليها تواصل معنا على الواتس</span>
     </div>
     <div class="card-body">
       <div class="patient-info-grid">
         <div class="info-field">
-          <div class="field-label">الاسم بالعربية</div>
+          <span class="field-label">الاسم بالعربية</span>
           <div class="field-value"><?= htmlspecialchars($patientData['name_ar'] ?? $patientData['name'] ?? '') ?></div>
           <?php if (!empty($patientData['name_en'])): ?>
           <div class="field-value-en"><?= htmlspecialchars($patientData['name_en']) ?></div>
           <?php endif; ?>
         </div>
         <div class="info-field">
-          <div class="field-label">رقم الهوية / الإقامة</div>
+          <span class="field-label">رقم الهوية / الإقامة</span>
           <div class="field-value" style="direction:ltr;text-align:right;"><?= htmlspecialchars($patientData['identity_number'] ?? '') ?></div>
         </div>
         <?php if (!empty($patientData['nationality_ar'])): ?>
         <div class="info-field">
-          <div class="field-label">الجنسية</div>
+          <span class="field-label">الجنسية</span>
           <div class="field-value"><?= htmlspecialchars($patientData['nationality_ar']) ?></div>
           <?php if (!empty($patientData['nationality_en'])): ?><div class="field-value-en"><?= htmlspecialchars($patientData['nationality_en']) ?></div><?php endif; ?>
         </div>
         <?php endif; ?>
         <?php if (!empty($patientData['employer_ar'])): ?>
         <div class="info-field">
-          <div class="field-label">جهة العمل</div>
+          <span class="field-label">جهة العمل</span>
           <div class="field-value"><?= htmlspecialchars($patientData['employer_ar']) ?></div>
           <?php if (!empty($patientData['employer_en'])): ?><div class="field-value-en"><?= htmlspecialchars($patientData['employer_en']) ?></div><?php endif; ?>
         </div>
         <?php endif; ?>
         <?php if (!empty($patientData['phone'])): ?>
         <div class="info-field">
-          <div class="field-label">رقم الجوال</div>
+          <span class="field-label">رقم الجوال</span>
           <div class="field-value" style="direction:ltr;text-align:right;"><?= htmlspecialchars($patientData['phone']) ?></div>
         </div>
         <?php endif; ?>
       </div>
 
-      <div style="margin-top:24px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <span style="font-size:14px;font-weight:700;color:var(--text);">حصة الإجازات المرضية المستهلكة</span>
-          <span style="font-size:14px;font-weight:800;color:var(--primary);"><?= $usedDays ?> / <?= $allowedDays ?> يوم</span>
+      <div style="margin-top:28px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span style="font-size:15px;font-weight:800;color:var(--text);">حصة الإجازات المرضية المستهلكة</span>
+          <span style="font-size:15px;font-weight:900;color:var(--primary);"><?= $usedDays ?> / <?= $allowedDays ?> يوم</span>
         </div>
         <?php
           $pct = $allowedDays > 0 ? min(100, round($usedDays / $allowedDays * 100)) : 0;
@@ -1282,7 +1298,7 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
   <div class="card">
     <div class="card-header">
       <h3>📝 إصدار إجازة مرضية جديدة (فورية)</h3>
-      <span style="font-size:13px;background:var(--success-bg);color:var(--success-text);padding:6px 14px;border-radius:50px;font-weight:800;">
+      <span style="font-size:14px;background:var(--success-bg);color:var(--success-text);padding:8px 16px;border-radius:50px;font-weight:900;box-shadow:var(--shadow-sm);">
         الرصيد المتاح: <?= $remainingDays ?> يوم
       </span>
     </div>
@@ -1322,9 +1338,9 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
           <div>
             <label class="form-label">🔢 المدة المحسوبة</label>
             <input type="number" class="form-control" id="daysDisplay" readonly
-                   placeholder="تُحسب برمجياً وبشكل تلقائي" style="background:var(--input-bg);cursor:not-allowed;font-weight:700;">
+                   placeholder="تُحسب برمجياً وبشكل تلقائي" style="background:var(--input-bg);cursor:not-allowed;font-weight:800;color:var(--primary);">
             <input type="hidden" id="daysCount" name="days_count">
-            <div id="daysWarning" style="display:none;margin-top:10px;" class="alert alert-warning"></div>
+            <div id="daysWarning" style="display:none;margin-top:12px;" class="alert alert-warning"></div>
           </div>
 
           <div>
@@ -1336,23 +1352,23 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
             </div>
             <input type="hidden" id="timeModeInput" name="time_mode" value="auto">
             <div id="manualTimeFields" style="display:none;">
-              <div style="display:flex;gap:10px;align-items:center;">
+              <div style="display:flex;gap:12px;align-items:center;">
                 <input type="time" class="form-control" id="manualTimeInput" name="manual_time" style="flex:1;">
-                <select class="form-select" name="manual_period" style="width:110px;">
+                <select class="form-select" name="manual_period" style="width:120px;">
                   <option value="AM">صباحاً</option>
                   <option value="PM">مساءً</option>
                 </select>
               </div>
             </div>
-            <div id="autoTimeInfo" style="font-size:12px;color:var(--text-muted);margin-top:6px;font-weight:600;">
+            <div id="autoTimeInfo" style="font-size:13px;color:var(--text-muted);margin-top:8px;font-weight:700;">
               ⏰ سيُعتمد التوقيت الفعلي للحظة الضغط على الزر
             </div>
           </div>
 
         </div>
 
-        <div style="margin-top:28px;display:flex;justify-content:flex-end;">
-          <button type="button" class="btn btn-primary" onclick="createLeave()" id="submitBtn" style="padding:14px 32px;font-size:16px;">
+        <div style="margin-top:32px;display:flex;justify-content:flex-end;">
+          <button type="button" class="btn btn-primary" onclick="createLeave()" id="submitBtn" style="padding:16px 36px;font-size:16px;">
             📄 اعتماد وإصدار الإجازة الفورية
           </button>
         </div>
@@ -1363,20 +1379,20 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
   <div class="card">
     <div class="card-body">
       <div class="empty-state">
-        <div class="empty-icon">🚫</div>
+        <span class="empty-icon">🚫</span>
         <h4>تعذر إصدار إجازات إضافية</h4>
-        <p style="margin-bottom:24px;max-width:600px;margin-left:auto;margin-right:auto;">
+        <p style="margin-bottom:28px;">
           <?php if ($allowedDays === 0): ?>
-           لقد استخدمت رصيدك من الايام كاملا. اذا تريد الاضافه تواصل معنا في الواتس.
+           لقد استخدمت رصيدك من الأيام كاملاً. إذا كنت تريد الإضافة تواصل معنا في الواتس.
           <?php else: ?>
             لقد استنفدت كامل رصيدك المسموح به (<?= $allowedDays ?> يوم). لطلب تمديد أو استثناء يرجى التواصل معنا.
           <?php endif; ?>
         </p>
         <a href="https://wa.me/966573436223" target="_blank"
-           style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;padding:14px 32px;border-radius:14px;font-size:16px;font-weight:800;text-decoration:none;box-shadow:0 8px 24px rgba(37,211,102,0.3);transition:var(--transition);"
+           style="display:inline-flex;align-items:center;gap:12px;background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;padding:16px 36px;border-radius:14px;font-size:16px;font-weight:800;text-decoration:none;box-shadow:0 10px 30px rgba(37,211,102,0.3);transition:var(--transition);"
            onmouseover="this.style.transform='translateY(-3px)'"
            onmouseout="this.style.transform='translateY(0)'">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="white">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white">
             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
           </svg>
           تواصل مع الدعم الفني (واتساب)
@@ -1389,12 +1405,12 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
   <div class="card">
     <div class="card-header">
       <h3>📋 السجل التاريخي لإجازاتي المرضية</h3>
-      <span style="font-size:13px;color:var(--text-muted);font-weight:700;"><?= count($myLeaves) ?> وثيقة معتمدة</span>
+      <span style="font-size:14px;color:var(--text-muted);font-weight:800;"><?= count($myLeaves) ?> وثيقة معتمدة</span>
     </div>
     <div class="card-body" style="padding:0;">
       <?php if (empty($myLeaves)): ?>
       <div class="empty-state">
-        <div class="empty-icon">📭</div>
+        <span class="empty-icon">📭</span>
         <h4>لا توجد وثائق في السجل</h4>
         <p>لم تقم بإصدار أي إجازة مرضية حتى الآن.</p>
       </div>
@@ -1417,27 +1433,27 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
           <tbody>
             <?php foreach ($myLeaves as $i => $lv): ?>
             <tr>
-              <td style="color:var(--text-muted);font-size:13px;"><?= $i + 1 ?></td>
-              <td style="font-weight:800;color:var(--primary);font-size:13px;direction:ltr;text-align:right;"><?= htmlspecialchars($lv['service_code'] ?? '') ?></td>
-              <td style="font-weight:700;"><?= htmlspecialchars($lv['h_name_ar'] ?? '') ?></td>
+              <td style="color:var(--text-muted);font-size:14px;font-weight:800;"><?= $i + 1 ?></td>
+              <td style="font-weight:900;color:var(--primary);font-size:14px;direction:ltr;text-align:right;"><?= htmlspecialchars($lv['service_code'] ?? '') ?></td>
+              <td style="font-weight:800;"><?= htmlspecialchars($lv['h_name_ar'] ?? '') ?></td>
               <td>
-                <div style="font-weight:700;color:var(--text);"><?= htmlspecialchars($lv['d_name_ar'] ?? '') ?></div>
-                <div style="font-size:11px;color:var(--text-muted);font-weight:600;"><?= htmlspecialchars($lv['d_title_ar'] ?? '') ?></div>
+                <div style="font-weight:800;color:var(--text);"><?= htmlspecialchars($lv['d_name_ar'] ?? '') ?></div>
+                <div style="font-size:12px;color:var(--text-muted);font-weight:700;margin-top:2px;"><?= htmlspecialchars($lv['d_title_ar'] ?? '') ?></div>
               </td>
-              <td style="direction:ltr;text-align:right;font-family:'Inter',sans-serif;"><?= fmtDateUser($lv['start_date']) ?></td>
-              <td style="direction:ltr;text-align:right;font-family:'Inter',sans-serif;"><?= fmtDateUser($lv['end_date']) ?></td>
+              <td style="direction:ltr;text-align:right;font-family:'Inter',sans-serif;font-weight:600;"><?= fmtDateUser($lv['start_date']) ?></td>
+              <td style="direction:ltr;text-align:right;font-family:'Inter',sans-serif;font-weight:600;"><?= fmtDateUser($lv['end_date']) ?></td>
               <td>
-                <span style="background:var(--primary-glow);color:var(--primary);padding:4px 12px;border-radius:50px;font-weight:800;font-size:13px;">
+                <span style="background:var(--primary-glow);color:var(--primary);padding:6px 14px;border-radius:50px;font-weight:900;font-size:13px;white-space:nowrap;display:inline-block;">
                   <?= $lv['days_count'] ?> يوم
                 </span>
               </td>
-              <td style="font-size:13px;direction:ltr;text-align:right;font-family:'Inter',sans-serif;">
+              <td style="font-size:14px;direction:ltr;text-align:right;font-family:'Inter',sans-serif;font-weight:600;">
                 <?= htmlspecialchars($lv['issue_time'] ?? '') ?>
                 <?= $lv['issue_period'] === 'AM' ? 'ص' : ($lv['issue_period'] === 'PM' ? 'م' : '') ?>
               </td>
               <td>
                 <a href="user.php?action=generate_pdf&leave_id=<?= $lv['id'] ?>&pdf_mode=download"
-                   class="btn btn-outline btn-sm">
+                   class="btn btn-outline btn-sm" style="white-space:nowrap;">
                   📄 تحميل PDF
                 </a>
               </td>
@@ -1516,7 +1532,7 @@ function calcDays() {
   hidden.value  = diff;
   if (diff > MAX_DAYS) {
     warning.style.display = 'block';
-    warning.innerHTML = ` ⚠️ <b>تنبيه: انك تطلب ايام اكثر من رصيدك المتاح لطلب ايام اضافية تواصل معنا على رقمنا واتس</b المدة المطلوبة (${diff} أيام) تتجاوز الرصيد المتاح (${MAX_DAYS} يوم).`;
+    warning.innerHTML = `⚠️ <b>تنبيه:</b> أنت تطلب أياماً أكثر من رصيدك المتاح. لطلب أيام إضافية تواصل معنا على رقمنا واتس. المدة المطلوبة (${diff} أيام) تتجاوز الرصيد المتاح (${MAX_DAYS} يوم).`;
   } else {
     warning.style.display = 'none';
   }
@@ -1583,7 +1599,7 @@ function showToast(msg, type = 'success') {
   const icons = { success: '✨', error: '❌', warning: '⚠️' };
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  toast.innerHTML = `<span style="font-size:18px;">${icons[type] || '💬'}</span><span style="flex:1;">${msg}</span>`;
+  toast.innerHTML = `<span style="font-size:20px;">${icons[type] || '💬'}</span><span style="flex:1;">${msg}</span>`;
   container.appendChild(toast);
   setTimeout(() => {
     toast.style.opacity = '0';
@@ -1626,13 +1642,13 @@ async function loadNotifications() {
         badge.style.display = 'none';
       }
       if (!data.notifications || data.notifications.length === 0) {
-        list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;font-weight:600;">لا توجد إشعارات حالياً</div>';
+        list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);font-size:14px;font-weight:700;">لا توجد إشعارات حالياً</div>';
         return;
       }
       list.innerHTML = data.notifications.map(n => `
         <div class="notif-item ${n.is_read == 0 ? 'unread' : ''}">
-          <div style="font-size:13px;font-weight:${n.is_read == 0 ? '800' : '600'};color:var(--text);line-height:1.5;">${escapeHtml(n.message)}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:6px;font-family:'Inter',sans-serif;">${n.created_at}</div>
+          <div style="font-size:14px;font-weight:${n.is_read == 0 ? '900' : '700'};color:var(--text);line-height:1.6;">${escapeHtml(n.message)}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:8px;font-family:'Inter',sans-serif;font-weight:600;">${n.created_at}</div>
         </div>
       `).join('');
     }
