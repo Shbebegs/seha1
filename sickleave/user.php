@@ -2,7 +2,7 @@
 /**
  * بوابة المرضى - user.php
  * المرضى يُنشئون إجازات مرضية حقيقية بنفس قالب لوحة التحكم
- * (نسخة مطورة بتصميم احترافي + Dark Mode + متوافقة بالكامل مع جميع الأجهزة)
+ * (نسخة حديثة كلياً بتصميم احترافي + إخفاء البيانات والإحصائيات افتراضياً + تنبيه التعديل عبر الواتس)
  */
 
 ini_set('session.use_only_cookies', '1');
@@ -173,17 +173,13 @@ $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
 // تسجيل الدخول
 if ($action === 'patient_login') {
-    // التحقق من CSRF
     if (!patient_verify_csrf($_POST['csrf_token'] ?? '')) {
         $loginError = 'طلب غير صالح. يرجى إعادة المحاولة.';
-        // إعادة توليد التوكن
         unset($_SESSION['patient_csrf_token']);
     } else {
-
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
 
-        // حماية من هجمات القوة الغاشمة
         $maxAttempts = 5;
         $lockMinutes = 15;
         $_SESSION['patient_login_attempts'] = $_SESSION['patient_login_attempts'] ?? 0;
@@ -195,13 +191,11 @@ if ($action === 'patient_login') {
         } elseif (empty($username) || empty($password)) {
             $loginError = 'يرجى إدخال اسم المستخدم وكلمة المرور.';
         } else {
-            // جلب المستخدم مع التحقق من وجود حساب مريض مرتبط به فقط
             $stmtCheck = $pdo->prepare("SELECT u.*, pa.patient_id, pa.allowed_days, pa.expiry_date FROM admin_users u INNER JOIN patient_accounts pa ON pa.user_id = u.id WHERE u.username = ? AND u.is_active = 1");
             $stmtCheck->execute([$username]);
             $userCheck = $stmtCheck->fetch();
 
             if ($userCheck && password_verify($password, $userCheck['password_hash'])) {
-                // التحقق من أن الحساب مرتبط بمريض فعلاً
                 if (empty($userCheck['patient_id']) || (int)$userCheck['patient_id'] <= 0) {
                     $_SESSION['patient_login_attempts'] = intval($_SESSION['patient_login_attempts'] ?? 0) + 1;
                     $loginError = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
@@ -233,7 +227,7 @@ if ($action === 'patient_login') {
                 }
             }
         }
-    } // نهاية التحقق من CSRF
+    }
 }
 
 // تسجيل الخروج
@@ -517,14 +511,10 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
 
    if ($pdfMode === 'download') {
         $scFile = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sc);
-
-        // Build full HTML with embedded PNGs/SVGs and Fonts as absolute URLs
         $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']) . '/';
 
         $pdfHtml  = '<!DOCTYPE html><html lang="ar"><head><meta charset="utf-8"/>';
         $pdfHtml .= '<title>Sick Leave Report</title>';
-        
-        // Google Fonts strictly for Arabic and Inter placeholders
         $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap" />';
         $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap" />';
         $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap" />';
@@ -537,39 +527,20 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
         $pdfHtml .= 'html{font-family:Inter,sans-serif;font-size:16px}body{font-weight:400;color:#191818;background:#ffffff;margin:0;padding:0}';
         $pdfHtml .= '</style>';
         
-        // =========================================================
-        // LOAD YOUR LOCAL OPENTYPE (.otf) FILES
-        // =========================================================
         $pdfHtml .= '<style>';
-        $pdfHtml .= '@font-face {';
-        $pdfHtml .= '    font-family: "Times New Roman";';
-        $pdfHtml .= '    src: url("' . $baseUrl . 'times_regular.otf") format("opentype");';
-        $pdfHtml .= '    font-weight: 400;';
-        $pdfHtml .= '    font-style: normal;';
-        $pdfHtml .= '}';
-
-        $pdfHtml .= '@font-face {';
-        $pdfHtml .= '    font-family: "Times New Roman";';
-        $pdfHtml .= '    src: url("' . $baseUrl . 'times_bold.otf") format("opentype");';
-        $pdfHtml .= '    font-weight: 700;';
-        $pdfHtml .= '    font-style: normal;';
-        $pdfHtml .= '}';
+        $pdfHtml .= '@font-face { font-family: "Times New Roman"; src: url("' . $baseUrl . 'times_regular.otf") format("opentype"); font-weight: 400; font-style: normal; }';
+        $pdfHtml .= '@font-face { font-family: "Times New Roman"; src: url("' . $baseUrl . 'times_bold.otf") format("opentype"); font-weight: 700; font-style: normal; }';
         $pdfHtml .= '</style>';
-        // =========================================================
 
         $pdfHtml .= '<style>';
         $pdfHtml .= '@page { size: 842.25px 1190.25px; margin: 0; }';
         $pdfHtml .= '.group1-container1 { width: 842.25px; height: 1190.25px; position: relative; background-color: transparent; margin: 0; padding: 0; }';
         $pdfHtml .= '.group1-thq-group1-elm { width: 842.25px; height: 1190.25px; position: relative; background-color: white; margin: 0; padding: 0; }';
-        
-        // Tables & Data Cells directly referencing the embedded font
         $pdfHtml .= '.info-table { position: absolute; top: 242px; left: 36px; width: 770px; border-collapse: separate; border-spacing: 0; border: 1px solid #cccccc; border-radius: 8px; overflow: hidden; background-color: transparent; z-index: 10; }';
         $pdfHtml .= '.info-table td { border-bottom: 1px solid #cccccc; border-right: 1px solid #cccccc; height: 42px; text-align: center; vertical-align: middle; padding: 4px 8px; }';
         $pdfHtml .= '.info-table td:last-child { border-right: none; } .info-table tr:last-child td { border-bottom: none; }';
-        
         $pdfHtml .= '.info-table .en-title { width: 161px; color: rgba(54, 111, 181, 1); font-size: 13.5px; font-weight: 700; text-align: center; font-family: "Times New Roman", serif; }';
         $pdfHtml .= '.info-table .data-cell { width: 240px; color: rgba(44, 62, 119, 1); font-size: 13.5px; font-family: "Times New Roman", serif; font-weight: 400; text-align: center; }';
-        
         $pdfHtml .= '.info-table .date-cell { font-size: 13.9px; } .info-table .data-cell.ar-text { font-family: "Noto Sans Arabic", sans-serif; }';
         $pdfHtml .= '.info-table .ar-title { width: 140px; color: rgba(54, 111, 181, 1); font-size: 13.5px; font-weight: 700; text-align: center; font-family: "Noto Sans Arabic", sans-serif; white-space: nowrap; }';
         $pdfHtml .= '.info-table tr.blue-row td { background-color: #2c3e77; color: #ffffff; border-bottom: 1px solid #cccccc; border-right: 1px solid #cccccc; }';
@@ -577,40 +548,27 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
         $pdfHtml .= '.info-table .blue-row .data-cell.ar-text { color: rgba(255, 255, 255, 1); font-size: 13.5px; font-family: "Times New Roman", serif; font-weight: 400; }';
         $pdfHtml .= '.info-table .blue-row .data-cell { color: rgba(255, 255, 255, 1); }';
         $pdfHtml .= '.info-table tr.gray-row td { background-color: #f7f7f7; }';
-        
-        // Layout Placeholders & Pointers
-        $pdfHtml .= '.en-spaced { letter-spacing: 0.3px; }';
-        $pdfHtml .= ':root { --footer-offset: 40px; }';
+        $pdfHtml .= '.en-spaced { letter-spacing: 0.3px; } :root { --footer-offset: 40px; }';
         $pdfHtml .= '.group1-thq-staticinfo-elm { top: 125px; left: 36.65px; width: 768.35px; height: 811.91px; display: flex; position: absolute; align-items: flex-start; pointer-events: none; }';
-        
-        // Side Placeholders (Synced with updated CSS specs)
         $pdfHtml .= '.top-right-placeholder { position: absolute; top: 36px; left: 543.36px; width: 262.43px; height: 107.22px; display: flex; align-items: center; justify-content: center; font-size: 14px; z-index: 5; }';
         $pdfHtml .= '.top-left-placeholder { position: absolute; top: 36px; left: 36px; width: 149.96px; height: 65.98px; display: flex; align-items: center; justify-content: center; font-size: 14px; z-index: 5; }';
         $pdfHtml .= '.bottom-right-placeholder { position: absolute; top: 1005px; left: 657.17px; width: 149.96px; height: 71.23px; display: flex; align-items: center; justify-content: center; font-size: 12px; z-index: 5; }';
         $pdfHtml .= '.header-placeholder { top: -50px; left: 320px; width: 163px; height: 40px; position: absolute; display: flex; align-items: center; justify-content: center; font-size: 11px; }';
-        
-        // Text Elements referencing the embedded font
         $pdfHtml .= '.group1-thq-text-elm41 { top: 40px; left: 289px; color: rgba(48, 109, 181, 1); width: 215px; position: absolute; font-size: 22.5px; font-weight: 700; text-align: center; line-height: 30px; }';
         $pdfHtml .= '.group1-thq-text-elm44 { top: -10px; left: 310px; color: rgba(0, 0, 0, 1); position: absolute; font-size: 17.3px; font-weight: 400; text-align: left; font-family: "Times New Roman", serif; }';
-        
         $pdfHtml .= '.group1-thq-hospitallogoandthename-elm { top: 760px; left: 438.94px; width: 403px; height: 202.78px; display: flex; position: absolute; align-items: flex-start; }';
         $pdfHtml .= '.placeholder-logo-hospital { top: -12px; left: 133px; width: 136px; height: 136px; position: absolute; display: flex; align-items: center; justify-content: center; font-size: 12px; }';
         $pdfHtml .= '.group1-thq-text-elm18 { top: 113px; color: rgba(0, 0, 0, 1); width: 403px; height: auto; position: absolute; font-size: 12.8px; text-align: center; line-height: 22px; }';
-        
         $pdfHtml .= '.group1-thq-thedateofissueandalsotimeofissue-elm { top: calc(989.85px + var(--footer-offset)); left: 37.37px; width: 250px; height: 56px; display: flex; position: absolute; align-items: flex-start; }';
         $pdfHtml .= '.group1-thq-text-elm22 { color: rgba(0, 0, 0, 1); font-size: 12.5px; font-weight: 700; text-align: left; line-height: 28px; font-family: "Times New Roman", serif; position: absolute; white-space: nowrap; }';
-        
         $pdfHtml .= '.group1-thq-text-elm36 { top: calc(724.55px + var(--footer-offset)); left: 29.23px; color: rgba(0, 0, 0, 1); position: absolute; font-size: 12px; font-weight: 700; text-align: center; font-family: "Noto Sans Arabic", sans-serif; line-height: 23px; }';
         $pdfHtml .= '.group1-thq-text-elm39 { top: calc(770px + var(--footer-offset)); left: 55px; color: rgba(0, 0, 0, 1); position: absolute; font-size: 12px; font-weight: 700; text-align: left; font-family: "Times New Roman", serif; }';
         $pdfHtml .= '.group1-thq-text-elm40 { top: calc(791px + var(--footer-offset)); left: 108.35px; color: rgba(20, 0, 255, 1); position: absolute; font-size: 11px; font-weight: 700; text-align: left; text-decoration: underline; pointer-events: auto; font-family: "Times New Roman", serif; }';
-        
-        // Footer & Misc
         $pdfHtml .= '.placeholder-136 { position: absolute; top: 620px; left: 122px; width: 136px; height: 136px; display: flex; align-items: center; justify-content: center; font-size: 12px; pointer-events: auto; }';
         $pdfHtml .= '.vertical-divider { position: absolute; top: 735px; left: 431px; width: 1px; height: 6.8cm; background-color: #dddddd; }';
         $pdfHtml .= '.thin-slash { font-weight: 300; font-family: "Inter", sans-serif; margin: 0 3px; display: inline-block; }';
         $pdfHtml .= '</style></head><body>';
 
-        // Construct body layout using .png targets
         $reportBodyPdf  = '<div class="group1-container1"><div class="group1-thq-group1-elm">';
         $reportBodyPdf .= '<div class="top-right-placeholder"><img src="' . $baseUrl . 'sehalogoright.png" style="width:100%;height:100%"/></div>';
         $reportBodyPdf .= '<div class="top-left-placeholder"><img src="' . $baseUrl . 'sehalogoleft.png" style="width:100%;height:100%"/></div>';
@@ -646,11 +604,9 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
         $reportBodyPdf .= '<div class="group1-thq-thedateofissueandalsotimeofissue-elm"><span class="group1-thq-text-elm22"><span>' . $timestampLine . '</span><br/><span>' . $dateLine . '</span></span></div>';
         $reportBodyPdf .= '</div></div>';
 
-        // Sweep string replacements to ensure any remaining dynamic outputs map absolutely to .png targets
         $pdfBody = str_replace(
             ['src="sehalogoright.png"', 'src="sehalogoleft.png"', 'src="bottomright.png"', 'src="header.png"', 'src="qr.svg"'],
             ['src="' . $baseUrl . 'sehalogoright.png"', 'src="' . $baseUrl . 'sehalogoleft.png"', 'src="' . $baseUrl . 'bottomright.png"', 'src="' . $baseUrl . 'header.png"', 'src="' . $baseUrl . 'qr.svg"'],
-            // Fallback sweep just in case original variable layers still contain old SVG extensions
             str_replace(
                 ['src="sehalogoright.svg"', 'src="sehalogoleft.svg"', 'src="bottomright.svg"', 'src="header.svg"'],
                 ['src="sehalogoright.png"', 'src="sehalogoleft.png"', 'src="bottomright.png"', 'src="header.png"'],
@@ -703,23 +659,8 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap" />
 <style>
-/* ========================================================= */
-/* تضمين خطوط Times New Roman بصيغة (.otf) لنسخة المتصفح   */
-/* ========================================================= */
-@font-face {
-    font-family: "Times New Roman";
-    src: url("<?= $baseUrl ?>times_regular.otf") format("opentype");
-    font-weight: 400;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: "Times New Roman";
-    src: url("<?= $baseUrl ?>times_bold.otf") format("opentype");
-    font-weight: 700;
-    font-style: normal;
-}
-/* ========================================================= */
+@font-face { font-family: "Times New Roman"; src: url("<?= $baseUrl ?>times_regular.otf") format("opentype"); font-weight: 400; font-style: normal; }
+@font-face { font-family: "Times New Roman"; src: url("<?= $baseUrl ?>times_bold.otf") format("opentype"); font-weight: 700; font-style: normal; }
 
 html { line-height: 1.15; font-family: Inter, sans-serif; font-size: 16px; }
 body { margin: 0; font-weight: 400; color: #191818; background: #FBFAF9; overflow-x: hidden; }
@@ -740,8 +681,7 @@ a { color: inherit; text-decoration: inherit; }
 .info-table tr.blue-row td:last-child { border-right: none; }
 .info-table .blue-row .data-cell.ar-text, .info-table .blue-row .data-cell { color: #ffffff; font-family: "Times New Roman", serif; }
 .info-table tr.gray-row td { background-color: #f7f7f7; }
-.en-spaced { letter-spacing: 0.3px; }
-:root { --footer-offset: 40px; }
+.en-spaced { letter-spacing: 0.3px; } :root { --footer-offset: 40px; }
 
 .group1-thq-staticinfo-elm { top: 125px; left: 36.65px; width: 768.35px; height: 811.91px; display: flex; position: absolute; align-items: flex-start; pointer-events: none; }
 .top-right-placeholder { position: absolute; top: 36px; left: 543.36px; width: 262.43px; height: 107.22px; display: flex; align-items: center; justify-content: center; font-size: 14px; z-index: 5; }
@@ -909,7 +849,7 @@ if (isPatientLoggedIn()) {
 })();
 </script>
 <style>
-/* ================= المتغيرات والألوان (نظام طبي فخم واحترافي) ================= */
+/* ================= المتغيرات والألوان (Modern SaaS Aesthetic) ================= */
 :root {
   --primary: #0d9488;
   --primary-light: #14b8a6;
@@ -930,11 +870,11 @@ if (isPatientLoggedIn()) {
   --input-bg: #f1f5f9;
   --table-hdr: #f8fafc;
   --table-hover: #f1f5f9;
-  --radius: 16px;
-  --radius-lg: 24px;
-  --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
-  --shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 12px 35px rgba(13, 148, 136, 0.08);
+  --radius: 20px;
+  --radius-lg: 28px;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.03);
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 15px 40px rgba(13, 148, 136, 0.1);
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --nav-bg: rgba(255, 255, 255, 0.85);
   --nav-border: #e2e8f0;
@@ -946,27 +886,27 @@ if (isPatientLoggedIn()) {
   --primary-dark: #0d9488;
   --primary-glow: rgba(20, 184, 166, 0.15);
   --secondary: #f8fafc;
-  --bg: #090d16;
-  --card: #111827;
+  --bg: #070a12;
+  --card: #0f172a;
   --text: #f1f5f9;
   --text-muted: #94a3b8;
-  --border: #1f2937;
-  --input-bg: #1f2937;
-  --table-hdr: #1f2937;
+  --border: #1e293b;
+  --input-bg: #1e293b;
+  --table-hdr: #1e293b;
   --table-hover: #161f33;
-  --shadow-sm: 0 2px 4px rgba(0,0,0,0.4);
-  --shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.7);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 15px 40px rgba(0, 0, 0, 0.8);
   --success-bg: rgba(16, 185, 129, 0.15);
   --success-text: #34d399;
-  --nav-bg: rgba(17, 24, 39, 0.85);
-  --nav-border: #1f2937;
+  --nav-bg: rgba(15, 23, 42, 0.85);
+  --nav-border: #1e293b;
 }
 
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; direction:rtl; transition: background-color 0.4s ease, color 0.4s ease; -webkit-font-smoothing: antialiased; }
 
-/* ═══ صفحة تسجيل الدخول (تصميم فخم ومتجاوب) ═══ */
+/* ═══ صفحة تسجيل الدخول (Ultra Modern & Flat) ═══ */
 .login-page {
   min-height:100vh; display:flex; align-items:center; justify-content:center;
   background:linear-gradient(-45deg, #0f172a, #0d9488, #0f766e, #0284c7, #0f172a);
@@ -976,7 +916,7 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
 .login-card {
   background:var(--card); 
   border-radius:var(--radius-lg); padding:48px 40px; width:100%; max-width:440px;
-  box-shadow:0 20px 60px rgba(0,0,0,0.4); animation:slideUp 0.6s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow:0 20px 70px rgba(0,0,0,0.5); animation:slideUp 0.6s cubic-bezier(0.34,1.56,0.64,1);
   border:1px solid var(--border); position:relative; z-index:2;
 }
 .login-icon { text-align:center; font-size:56px; margin-bottom:16px; animation:float 4s ease-in-out infinite; display:block; }
@@ -985,7 +925,7 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
 .form-group { margin-bottom:20px; }
 .form-group label { display:block; font-size:13px; font-weight:700; color:var(--text); margin-bottom:8px; }
 .form-control {
-  width:100%; padding:14px 18px; border:2px solid var(--border); border-radius:12px;
+  width:100%; padding:14px 18px; border:2px solid var(--border); border-radius:14px;
   font-family:'Cairo',sans-serif; font-size:15px; color:var(--text); background:var(--input-bg); font-weight:600;
   transition:var(--transition); outline:none; box-shadow:var(--shadow-sm);
 }
@@ -993,19 +933,19 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
 
 .btn {
   display:inline-flex; align-items:center; justify-content:center; gap:8px;
-  padding:14px 28px; border:none; border-radius:12px; font-family:'Cairo',sans-serif;
+  padding:14px 28px; border:none; border-radius:14px; font-family:'Cairo',sans-serif;
   font-size:15px; font-weight:700; cursor:pointer; transition:var(--transition); text-decoration:none;
 }
 .btn-primary { background:linear-gradient(135deg, var(--primary-dark), var(--primary-light)); color:#fff; box-shadow:0 6px 20px var(--primary-glow); }
 .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 25px var(--primary-glow); filter: brightness(1.05); }
 .btn-full { width:100%; }
 
-.alert { padding:14px 18px; border-radius:12px; font-size:14px; font-weight:700; margin-bottom:20px; line-height: 1.5; }
+.alert { padding:14px 18px; border-radius:14px; font-size:14px; font-weight:700; margin-bottom:20px; line-height: 1.6; }
 .alert-danger { background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid rgba(239, 68, 68, 0.2); }
 .alert-success { background:var(--success-bg); color:var(--success-text); border:1px solid rgba(16, 185, 129, 0.2); }
 .alert-warning { background:rgba(245, 158, 11, 0.1); color:var(--warning); border:1px solid rgba(245, 158, 11, 0.2); }
 
-/* ═══ الشريط العلوي (Navbar فخم وزجاجي) ═══ */
+/* ═══ الشريط العلوي (Navbar زجاجي أنيق) ═══ */
 .navbar {
   background:var(--nav-bg); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
   padding:14px 28px; border-bottom:1px solid var(--nav-border);
@@ -1014,17 +954,32 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
   transition: var(--transition);
 }
 .navbar .brand { display:flex; align-items:center; gap:12px; color:var(--text); font-size:18px; font-weight:800; }
-.navbar .brand-icon { width:42px; height:42px; background:linear-gradient(135deg, var(--primary), var(--primary-light)); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:0 4px 12px var(--primary-glow); }
+.navbar .brand-icon { width:42px; height:42px; background:linear-gradient(135deg, var(--primary), var(--primary-light)); border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:0 4px 12px var(--primary-glow); }
 .navbar .user-actions { display:flex; align-items:center; gap:12px; }
 .navbar .user-badge { background:var(--input-bg); border:1px solid var(--border); padding:8px 16px; border-radius:50px; display:flex; align-items:center; gap:8px; color:var(--text); font-size:14px; font-weight:700; transition:var(--transition); }
-.btn-icon-nav { background:var(--input-bg); border:1px solid var(--border); color:var(--text); width:42px; height:42px; border-radius:12px; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; transition:var(--transition); box-shadow:var(--shadow-sm); }
+.btn-icon-nav { background:var(--input-bg); border:1px solid var(--border); color:var(--text); width:42px; height:42px; border-radius:14px; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; transition:var(--transition); box-shadow:var(--shadow-sm); }
 .btn-icon-nav:hover { background:var(--border); transform: scale(1.05); }
 
-.btn-logout { background:rgba(239,68,68,0.1); color:var(--danger); border:1px solid rgba(239,68,68,0.2); padding:10px 18px; border-radius:12px; font-family:'Cairo',sans-serif; font-size:14px; font-weight:700; cursor:pointer; transition:var(--transition); }
+.btn-logout { background:rgba(239,68,68,0.1); color:var(--danger); border:1px solid rgba(239,68,68,0.2); padding:10px 18px; border-radius:14px; font-family:'Cairo',sans-serif; font-size:14px; font-weight:700; cursor:pointer; transition:var(--transition); }
 .btn-logout:hover { background:var(--danger); color:#fff; box-shadow:0 4px 15px rgba(239,68,68,0.2); }
 
-/* ═══ المحتوى الرئيسي متجاوب بالكامل ═══ */
+/* ═══ المحتوى والتحكم الذكي ═══ */
 .main-content { max-width:1200px; margin:0 auto; padding:36px 20px; }
+
+/* زر إظهار/إخفاء الإحصائيات */
+.toggle-panel-wrap { text-align: center; margin-bottom: 32px; }
+.btn-toggle-stats {
+  background: var(--card); border: 2px solid var(--border); color: var(--text);
+  padding: 14px 32px; border-radius: 50px; font-size: 15px; font-weight: 800;
+  display: inline-flex; align-items: center; gap: 10px; cursor: pointer;
+  transition: var(--transition); box-shadow: var(--shadow); font-family: 'Cairo', sans-serif;
+}
+.btn-toggle-stats:hover { border-color: var(--primary); transform: translateY(-2px); }
+.btn-toggle-stats.active { background: var(--primary-glow); border-color: var(--primary); color: var(--primary); }
+
+/* حاوية الإحصائيات المخفية افتراضياً */
+#statsInfoContainer { transition: var(--transition); }
+
 .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:20px; margin-bottom:36px; }
 .stat-card { background:var(--card); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow); border:1px solid var(--border); display:flex; align-items:center; gap:18px; transition:var(--transition); }
 .stat-card:hover { transform:translateY(-4px); box-shadow:var(--shadow-lg); border-color: var(--primary-light); }
@@ -1041,12 +996,32 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
 .card-header h3 { font-size:18px; font-weight:800; color:var(--primary); display:flex; align-items:center; gap:10px; }
 .card-body { padding:32px; }
 
+/* إشعار البيانات الثابتة والتواصل */
+.fixed-data-notice {
+  background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(239,68,68,0.05));
+  border: 1px solid rgba(245,158,11,0.3); border-radius: 16px; padding: 18px 24px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+  margin-bottom: 24px;
+}
+.notice-text { display: flex; align-items: center; gap: 12px; }
+.notice-icon { font-size: 24px; flex-shrink: 0; }
+.notice-title { font-size: 14px; font-weight: 800; color: var(--text); display: block; }
+.notice-desc { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+
+.btn-whatsapp-sm {
+  background: #25d366; color: #fff; padding: 10px 20px; border-radius: 12px;
+  font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; gap: 8px;
+  text-decoration: none; box-shadow: 0 4px 15px rgba(37,211,102,0.2); transition: var(--transition);
+}
+.btn-whatsapp-sm:hover { background: #128c7e; transform: translateY(-2px); }
+
 .patient-info-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px; }
-.info-field { background:var(--input-bg); border:1px solid var(--border); border-radius:14px; padding:16px 20px; transition:var(--transition); box-shadow:var(--shadow-sm); }
+.info-field { background:var(--input-bg); border:1px solid var(--border); border-radius:16px; padding:16px 20px; transition:var(--transition); box-shadow:var(--shadow-sm); position: relative; overflow: hidden; }
 .info-field:hover { border-color: var(--text-muted); }
 .info-field .field-label { font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:block; }
 .info-field .field-value { font-size:16px; font-weight:700; color:var(--text); }
 .info-field .field-value-en { font-size:13px; color:var(--text-muted); direction:ltr; text-align:left; margin-top:4px; font-family: 'Inter', sans-serif; font-weight:500; }
+.info-badge-lock { position: absolute; top: 12px; left: 12px; font-size: 11px; color: var(--text-muted); background: var(--card); padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); font-weight: 700; }
 
 .quota-bar-wrap { background:var(--input-bg); border-radius:50px; height:16px; overflow:hidden; margin:14px 0; border:1px solid var(--border); box-shadow:inset 0 2px 4px rgba(0,0,0,0.05); }
 .quota-bar { height:100%; border-radius:50px; background:linear-gradient(90deg, var(--success), #34d399); transition:width 1s cubic-bezier(0.4, 0, 0.2, 1); }
@@ -1056,12 +1031,12 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
 .leave-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
 @media (max-width:768px) { .leave-form-grid { grid-template-columns:1fr; } }
 .form-label { display:block; font-size:14px; font-weight:800; color:var(--text); margin-bottom:10px; }
-.form-select { width:100%; padding:14px 18px; border:2px solid var(--border); border-radius:12px; font-family:'Cairo',sans-serif; font-size:15px; color:var(--text); background:var(--input-bg); transition:var(--transition); outline:none; cursor:pointer; font-weight:700; box-shadow:var(--shadow-sm); }
+.form-select { width:100%; padding:14px 18px; border:2px solid var(--border); border-radius:14px; font-family:'Cairo',sans-serif; font-size:15px; color:var(--text); background:var(--input-bg); transition:var(--transition); outline:none; cursor:pointer; font-weight:700; box-shadow:var(--shadow-sm); }
 .form-select:focus { border-color:var(--primary-light); background:var(--card); box-shadow:0 0 0 4px var(--primary-glow); }
 .form-select option { background: var(--card); color: var(--text); font-weight:600; }
 
 .time-mode-tabs { display:flex; gap:10px; margin-bottom:14px; }
-.time-tab { flex:1; padding:12px; border:2px solid var(--border); border-radius:12px; background:var(--input-bg); font-family:'Cairo',sans-serif; font-size:14px; font-weight:800; cursor:pointer; transition:var(--transition); text-align:center; color:var(--text-muted); box-shadow:var(--shadow-sm); }
+.time-tab { flex:1; padding:12px; border:2px solid var(--border); border-radius:14px; background:var(--input-bg); font-family:'Cairo',sans-serif; font-size:14px; font-weight:800; cursor:pointer; transition:var(--transition); text-align:center; color:var(--text-muted); box-shadow:var(--shadow-sm); }
 .time-tab.active { border-color:var(--primary); background:var(--primary-glow); color:var(--primary); }
 .time-tab:hover:not(.active) { border-color:var(--text-muted); }
 
@@ -1070,7 +1045,7 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
 .leaves-table td { padding:18px 20px; border-bottom:1px solid var(--border); vertical-align:middle; color:var(--text); font-weight:600; }
 .leaves-table tr:hover td { background:var(--table-hover); }
 
-.btn-sm { padding:10px 18px; font-size:14px; border-radius:10px; }
+.btn-sm { padding:10px 18px; font-size:14px; border-radius:12px; }
 .btn-outline { background:transparent; border:2px solid var(--primary-light); color:var(--primary); font-weight:800; box-shadow:none; }
 .btn-outline:hover { background:var(--primary); color:#fff; border-color:var(--primary); box-shadow:0 4px 15px var(--primary-glow); }
 
@@ -1111,6 +1086,8 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
   .card-header { padding:18px 20px; }
   .card-body { padding:20px; }
   .leaves-table td, .leaves-table th { padding:12px 14px; font-size:14px; }
+  .btn-toggle-stats { width: 100%; justify-content: center; }
+  .fixed-data-notice { flex-direction: column; align-items: flex-start; }
 }
 </style>
 </head>
@@ -1198,102 +1175,130 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
 
 <div class="main-content">
 
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-icon blue">📋</div>
-      <div class="stat-info">
-        <div class="num"><?= $allowedDays ?></div>
-        <div class="label">إجمالي الأيام المسموحة</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon green">✅</div>
-      <div class="stat-info">
-        <div class="num"><?= $remainingDays ?></div>
-        <div class="label">الأيام المتبقية الحالية</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon orange">📅</div>
-      <div class="stat-info">
-        <div class="num"><?= $usedDays ?></div>
-        <div class="label">الأيام المستخدمة</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon red">📄</div>
-      <div class="stat-info">
-        <div class="num"><?= count($myLeaves) ?></div>
-        <div class="label">إجمالي الإجازات المُصدرة</div>
-      </div>
-    </div>
+  <div class="toggle-panel-wrap">
+    <button type="button" id="toggleStatsBtn" class="btn-toggle-stats" onclick="toggleStatsInfo()">
+      📊 إظهار الإحصائيات والبيانات الشخصية
+    </button>
   </div>
 
-  <?php if ($patientData): ?>
-  <div class="card">
-    <div class="card-header">
-      <h3>👤 بياناتي الشخصية والوظيفية</h3>
-      <span style="font-size:13px;color:var(--text-muted);font-weight:800;background:var(--input-bg);padding:6px 14px;border-radius:10px;border:1px solid var(--border);">هذه بياناتك للعرض فقط، لإجراء أي تعديلات عليها تواصل معنا على الواتس</span>
+  <div id="statsInfoContainer" style="display:none;">
+    
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon blue">📋</div>
+        <div class="stat-info">
+          <div class="num"><?= $allowedDays ?></div>
+          <div class="label">إجمالي الأيام المسموحة</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green">✅</div>
+        <div class="stat-info">
+          <div class="num"><?= $remainingDays ?></div>
+          <div class="label">الأيام المتبقية الحالية</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon orange">📅</div>
+        <div class="stat-info">
+          <div class="num"><?= $usedDays ?></div>
+          <div class="label">الأيام المستخدمة</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon red">📄</div>
+        <div class="stat-info">
+          <div class="num"><?= count($myLeaves) ?></div>
+          <div class="label">إجمالي الإجازات المُصدرة</div>
+        </div>
+      </div>
     </div>
-    <div class="card-body">
-      <div class="patient-info-grid">
-        <div class="info-field">
-          <span class="field-label">الاسم بالعربية</span>
-          <div class="field-value"><?= htmlspecialchars($patientData['name_ar'] ?? $patientData['name'] ?? '') ?></div>
-          <?php if (!empty($patientData['name_en'])): ?>
-          <div class="field-value-en"><?= htmlspecialchars($patientData['name_en']) ?></div>
+
+    <?php if ($patientData): ?>
+    <div class="card">
+      <div class="card-header">
+        <h3>👤 بياناتي الشخصية والوظيفية</h3>
+      </div>
+      <div class="card-body">
+        
+        <div class="fixed-data-notice">
+          <div class="notice-text">
+            <span class="notice-icon">🔒</span>
+            <div>
+              <span class="notice-title">البيانات ثابتة ومحمية</span>
+              <span class="notice-desc">هذه البيانات مسجلة رسمياً ولا يمكن تغييرها ذاتياً. إذا كان هناك خطأ وتريد التعديل، تواصل معنا.</span>
+            </div>
+          </div>
+          <a href="https://wa.me/966573436223?text=أهلاً،%20أريد%20تعديل%20بياناتي%20في%20بوابة%20المرضى" target="_blank" class="btn-whatsapp-sm">
+            💬 التواصل واتس للتعديل
+          </a>
+        </div>
+
+        <div class="patient-info-grid">
+          <div class="info-field">
+            <span class="info-badge-lock">ثابت</span>
+            <span class="field-label">الاسم بالعربية</span>
+            <div class="field-value"><?= htmlspecialchars($patientData['name_ar'] ?? $patientData['name'] ?? '') ?></div>
+            <?php if (!empty($patientData['name_en'])): ?>
+            <div class="field-value-en"><?= htmlspecialchars($patientData['name_en']) ?></div>
+            <?php endif; ?>
+          </div>
+          <div class="info-field">
+            <span class="info-badge-lock">ثابت</span>
+            <span class="field-label">رقم الهوية / الإقامة</span>
+            <div class="field-value" style="direction:ltr;text-align:right;"><?= htmlspecialchars($patientData['identity_number'] ?? '') ?></div>
+          </div>
+          <?php if (!empty($patientData['nationality_ar'])): ?>
+          <div class="info-field">
+            <span class="info-badge-lock">ثابت</span>
+            <span class="field-label">الجنسية</span>
+            <div class="field-value"><?= htmlspecialchars($patientData['nationality_ar']) ?></div>
+            <?php if (!empty($patientData['nationality_en'])): ?><div class="field-value-en"><?= htmlspecialchars($patientData['nationality_en']) ?></div><?php endif; ?>
+          </div>
+          <?php endif; ?>
+          <?php if (!empty($patientData['employer_ar'])): ?>
+          <div class="info-field">
+            <span class="info-badge-lock">ثابت</span>
+            <span class="field-label">جهة العمل</span>
+            <div class="field-value"><?= htmlspecialchars($patientData['employer_ar']) ?></div>
+            <?php if (!empty($patientData['employer_en'])): ?><div class="field-value-en"><?= htmlspecialchars($patientData['employer_en']) ?></div><?php endif; ?>
+          </div>
+          <?php endif; ?>
+          <?php if (!empty($patientData['phone'])): ?>
+          <div class="info-field">
+            <span class="info-badge-lock">ثابت</span>
+            <span class="field-label">رقم الجوال</span>
+            <div class="field-value" style="direction:ltr;text-align:right;"><?= htmlspecialchars($patientData['phone']) ?></div>
+          </div>
           <?php endif; ?>
         </div>
-        <div class="info-field">
-          <span class="field-label">رقم الهوية / الإقامة</span>
-          <div class="field-value" style="direction:ltr;text-align:right;"><?= htmlspecialchars($patientData['identity_number'] ?? '') ?></div>
-        </div>
-        <?php if (!empty($patientData['nationality_ar'])): ?>
-        <div class="info-field">
-          <span class="field-label">الجنسية</span>
-          <div class="field-value"><?= htmlspecialchars($patientData['nationality_ar']) ?></div>
-          <?php if (!empty($patientData['nationality_en'])): ?><div class="field-value-en"><?= htmlspecialchars($patientData['nationality_en']) ?></div><?php endif; ?>
-        </div>
-        <?php endif; ?>
-        <?php if (!empty($patientData['employer_ar'])): ?>
-        <div class="info-field">
-          <span class="field-label">جهة العمل</span>
-          <div class="field-value"><?= htmlspecialchars($patientData['employer_ar']) ?></div>
-          <?php if (!empty($patientData['employer_en'])): ?><div class="field-value-en"><?= htmlspecialchars($patientData['employer_en']) ?></div><?php endif; ?>
-        </div>
-        <?php endif; ?>
-        <?php if (!empty($patientData['phone'])): ?>
-        <div class="info-field">
-          <span class="field-label">رقم الجوال</span>
-          <div class="field-value" style="direction:ltr;text-align:right;"><?= htmlspecialchars($patientData['phone']) ?></div>
-        </div>
-        <?php endif; ?>
-      </div>
 
-      <div style="margin-top:28px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <span style="font-size:15px;font-weight:800;color:var(--text);">حصة الإجازات المرضية المستهلكة</span>
-          <span style="font-size:15px;font-weight:900;color:var(--primary);"><?= $usedDays ?> / <?= $allowedDays ?> يوم</span>
+        <div style="margin-top:28px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <span style="font-size:15px;font-weight:800;color:var(--text);">حصة الإجازات المرضية المستهلكة</span>
+            <span style="font-size:15px;font-weight:900;color:var(--primary);"><?= $usedDays ?> / <?= $allowedDays ?> يوم</span>
+          </div>
+          <?php
+            $pct = $allowedDays > 0 ? min(100, round($usedDays / $allowedDays * 100)) : 0;
+            $barClass = $pct >= 90 ? 'danger' : ($pct >= 60 ? 'warning' : '');
+          ?>
+          <div class="quota-bar-wrap">
+            <div class="quota-bar <?= $barClass ?>" style="width:<?= $pct ?>%"></div>
+          </div>
+          <div class="days-counter">
+            <span>مستخدم: <span class="used"><?= $usedDays ?></span></span>
+            <span>•</span>
+            <span>متبقي: <span class="remaining"><?= $remainingDays ?></span></span>
+            <span>•</span>
+            <span>المسموح الكلي: <span class="total"><?= $allowedDays ?></span></span>
+          </div>
         </div>
-        <?php
-          $pct = $allowedDays > 0 ? min(100, round($usedDays / $allowedDays * 100)) : 0;
-          $barClass = $pct >= 90 ? 'danger' : ($pct >= 60 ? 'warning' : '');
-        ?>
-        <div class="quota-bar-wrap">
-          <div class="quota-bar <?= $barClass ?>" style="width:<?= $pct ?>%"></div>
-        </div>
-        <div class="days-counter">
-          <span>مستخدم: <span class="used"><?= $usedDays ?></span></span>
-          <span>•</span>
-          <span>متبقي: <span class="remaining"><?= $remainingDays ?></span></span>
-          <span>•</span>
-          <span>المسموح الكلي: <span class="total"><?= $allowedDays ?></span></span>
-        </div>
+
       </div>
     </div>
-  </div>
-  <?php endif; ?>
+    <?php endif; ?>
 
+  </div>
   <?php if ($remainingDays > 0): ?>
   <div class="card">
     <div class="card-header">
@@ -1471,6 +1476,23 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
 <script>
 const MAX_DAYS = <?= $remainingDays ?>;
 
+// ================= إظهار / إخفاء الإحصائيات والبيانات =================
+function toggleStatsInfo() {
+  const container = document.getElementById('statsInfoContainer');
+  const btn = document.getElementById('toggleStatsBtn');
+  const isHidden = container.style.display === 'none';
+  
+  if (isHidden) {
+    container.style.display = 'block';
+    btn.innerHTML = '👁️ إخفاء الإحصائيات والبيانات الشخصية';
+    btn.classList.add('active');
+  } else {
+    container.style.display = 'none';
+    btn.innerHTML = '📊 إظهار الإحصائيات والبيانات الشخصية';
+    btn.classList.remove('active');
+  }
+}
+
 // ================= إدارة الوضع الليلي (Dark Mode) =================
 function toggleTheme() {
   const root = document.documentElement;
@@ -1487,7 +1509,6 @@ function updateThemeIcon(theme) {
   if (icon) { icon.textContent = theme === 'dark' ? '🌙' : '☀️'; }
 }
 
-// ضبط الأيقونة عند التحميل
 document.addEventListener('DOMContentLoaded', () => {
   const current = document.documentElement.getAttribute('data-theme') || 'light';
   updateThemeIcon(current);
@@ -1576,11 +1597,7 @@ function createLeave() {
     .then(data => {
       if (data.success) {
         showToast('✅ ' + data.message + ' (الرمز: ' + data.service_code + ')', 'success');
-        
-        setTimeout(() => {
-          location.reload();
-        }, 1500);
-
+        setTimeout(() => { location.reload(); }, 1500);
       } else {
         showToast(data.message || 'حدث خطأ غير متوقع.', 'error');
         btn.disabled = false;
