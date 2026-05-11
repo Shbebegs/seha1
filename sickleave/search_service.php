@@ -19,7 +19,7 @@ function connect_db1() {
     $conn = @new mysqli(
         'mysql.railway.internal',
         'root',
-        'mDxJcHtRORIlpLbtDJKKckeuLgozRUVO',
+        'ExvKbuJnGIvDATyXWCHtpjOFluFAgeqQ',
         'railway',
         3306
     );
@@ -34,10 +34,10 @@ function connect_db1() {
 
 function connect_db2() {
     $conn = @new mysqli(
-        'c9cujduvu830eexs.cbetxkdyhwsb.us-east-1.rds.amazonaws.com',
-        'q2xjpqcepsmd4v12',
-        'v8lcs6awp4vj9u28',
-        'cdidptf4q81rafg8',
+        'mysql.railway.internal',
+        'root',
+        'CSCoMqXcUDBrzyRPMgjIxRVziMqcOFoK',
+        'railway',
         3306
     );
     if ($conn->connect_error) {
