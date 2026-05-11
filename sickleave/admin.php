@@ -1259,8 +1259,8 @@ if ($pdfMode === 'download') {
     
     // Replace relative SVG paths with absolute URLs
     $pdfBody = str_replace(
-        ['src="sehalogoright.svg"', 'src="sehalogoleft.svg"', 'src="bottomright.svg"', 'src="header.svg"', 'src="qr.svg"'],
-        ['src="' . $baseUrl . 'sehalogoright.svg"', 'src="' . $baseUrl . 'sehalogoleft.svg"', 'src="' . $baseUrl . 'bottomright.svg"', 'src="' . $baseUrl . 'header.svg"', 'src="' . $baseUrl . 'qr.svg"'],
+        ['src="sehalogoright.svg"', 'src="sehalogoleft.png"', 'src="bottomright.svg"', 'src="header.svg"', 'src="qr.svg"'],
+        ['src="' . $baseUrl . 'sehalogoright.svg"', 'src="' . $baseUrl . 'sehalogoleft.png"', 'src="' . $baseUrl . 'bottomright.svg"', 'src="' . $baseUrl . 'header.svg"', 'src="' . $baseUrl . 'qr.svg"'],
         $reportBody
     );
     $pdfHtml .= $pdfBody;
@@ -1400,7 +1400,7 @@ if ($pdfMode === 'download') {
     $html .= '  <div class="group1-thq-group1-elm" id="report-content">' . "\n";
     // Side Placeholders
     $html .= '    <div class="top-right-placeholder"><img src="sehalogoright.svg" alt="Logo Placeholder" style="width: 100%; height: 100%;" onerror="this.style.display=\'none\'" /></div>' . "\n";
-    $html .= '    <div class="top-left-placeholder"><img src="sehalogoleft.svg" alt="Logo Placeholder" style="width: 100%; height: 100%;" onerror="this.style.display=\'none\'" /></div>' . "\n";
+    $html .= '    <div class="top-left-placeholder"><img src="sehalogoleft.png" alt="Logo Placeholder" style="width: 100%; height: 100%;" onerror="this.style.display=\'none\'" /></div>' . "\n";
     $html .= '    <div class="bottom-right-placeholder"><img src="bottomright.svg" alt="Signature Placeholder" style="width: 100%; height: 100%;" onerror="this.style.display=\'none\'" /></div>' . "\n";
     // Headers
     $html .= '    <div class="group1-thq-staticinfo-elm">' . "\n";
