@@ -18,7 +18,7 @@ ServerSignature Off
 
     # منع الوصول لملفات PHP الحساسة مباشرة (فقط admin.php, login.php, search_service.php, user.php, health.php مسموح)
     RewriteCond %{REQUEST_FILENAME} \.php$
-    RewriteCond %{REQUEST_URI} !^/sickleave/(admin|login|search_service|user|health|generate_pdf|newdata)\.php$ [NC]
+    RewriteCond %{REQUEST_URI} !^/sickleave/(admin|login|search_service|user|health)\.php$ [NC]
     RewriteRule \.php$ - [F,L]
 
     # منع تنفيذ PHP في مجلدات الرفع
