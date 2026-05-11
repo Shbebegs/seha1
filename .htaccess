@@ -11,8 +11,8 @@ ServerSignature Off
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # توجيه الجذر "/" إلى sickleave/index.html (internal rewrite, not redirect)
-    RewriteRule ^$ sickleave/index.html [L]
+    # توجيه الجذر "/" إلى sickleave/index.html
+    RewriteRule ^$ /sickleave/index.html [L,R=302]
 
     # منع الوصول لملفات vendor
     RewriteRule ^vendor/ - [F,L]
