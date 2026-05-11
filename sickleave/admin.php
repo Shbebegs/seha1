@@ -7358,7 +7358,10 @@ if (!in_array($uiDataViewMode, ['table','compact','cards','zebra','glass','minim
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
+          <div class="modal-footer">
+                <button type="button" class="btn btn-outline-success d-none me-auto" id="copyAcctMsgBtn">
+                    <i class="bi bi-whatsapp"></i> نسخ رسالة الواتساب
+                </button>
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
                 <button type="button" class="btn btn-gradient" id="acctNewUserSave"><i class="bi bi-plus"></i> إنشاء الحساب</button>
             </div>
@@ -9761,65 +9764,113 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Add new user
-       document.getElementById('acctAddUserBtn')?.addEventListener('click', () => {
+  // 1. دالة توليد كلمات مرور قوية (حروف كبيرة وصغيرة + أرقام + رموز خاصة)
+        function generateStrongPassword(length = 10) {
+            const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+            const lower = 'abcdefghijkmnpqrstuvwxyz';
+            const numbers = '23456789';
+            const special = '@#$%&*!';
+            const all = upper + lower + numbers + special;
+
+            let pass = '';
+            pass += upper.charAt(Math.floor(Math.random() * upper.length));
+            pass += lower.charAt(Math.floor(Math.random() * lower.length));
+            pass += numbers.charAt(Math.floor(Math.random() * numbers.length));
+            pass += special.charAt(Math.floor(Math.random() * special.length));
+
+            for (let i = 4; i < length; i++) {
+                pass += all.charAt(Math.floor(Math.random() * all.length));
+            }
+
+            return pass.split('').sort(() => 0.5 - Math.random()).join('');
+        }
+
+        // 2. تصفير الحقول وإخفاء زر النسخ عند فتح المودال
+        document.getElementById('acctAddUserBtn')?.addEventListener('click', () => {
             document.getElementById('acctNewUsername').value = '';
             document.getElementById('acctNewPassword').value = '';
-            document.getElementById('acctNewPassword').type = 'password'; // إعادته مخفياً بالبداية
+            document.getElementById('acctNewPassword').type = 'password';
             document.getElementById('acctNewDisplayName').value = '';
             if (document.getElementById('acctNewLinkPatient')) document.getElementById('acctNewLinkPatient').value = '0';
             if (document.getElementById('acctNewAllowedDays')) document.getElementById('acctNewAllowedDays').value = '0';
+            
+            document.getElementById('copyAcctMsgBtn')?.classList.add('d-none');
             acctNewUserModal.show();
         });
-        // دالة مساعدة لتوليد كلمة مرور عشوائية (بدون حروف معقدة أو متشابهة مثل l و 1 و O و 0)
-        function generateSimplePassword(length = 6) {
-            const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
-            let pass = '';
-            for (let i = 0; i < length; i++) {
-                pass += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return pass;
-        }
 
-        // الاستماع لتغيير قائمة اختيار المريض في مودال إضافة حساب
+        // 3. التعبئة التلقائية وإظهار زر النسخ عند اختيار المريض
         document.getElementById('acctNewLinkPatient')?.addEventListener('change', function() {
             const ptId = this.value;
+            const copyBtn = document.getElementById('copyAcctMsgBtn');
+
             if (ptId && ptId !== '0') {
-                // البحث عن بيانات المريض الكاملة من الكاش الموجود في الجافاسكربت
                 const pt = (currentTableData.patients || []).find(x => x.id == ptId);
                 if (pt) {
-                    // 1. تعبئة الاسم المعروض تلقائياً
                     document.getElementById('acctNewDisplayName').value = pt.name_ar || pt.name || '';
 
-                    // 2. استخراج الاسم الأول الإنجليزي لاسم المستخدم
-                    let baseUser = '';
-                    if (pt.name_en) {
-                        // أخذ أول كلمة وتنظيفها من أي رموز وجعلها حروف صغيرة
-                        baseUser = pt.name_en.trim().split(/\s+/)[0].replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-                    }
-                    // إذا لم يكن مسجلاً له اسم إنجليزي، نضع كلمة pt كبديل
-                    if (!baseUser) {
-                        baseUser = 'pt';
-                    }
-                    // إضافة آخر 3 أرقام من الهوية لضمان أن اليوزر فريد ولا يتكرر
+                    let baseUser = pt.name_en ? pt.name_en.trim().split(/\s+/)[0].replace(/[^a-zA-Z0-9]/g, '').toLowerCase() : 'pt';
                     const idSuffix = (pt.identity_number || '').slice(-3);
+                    // تم تصحيح اسم المتغير هنا ليصبح idSuffix
                     document.getElementById('acctNewUsername').value = baseUser + idSuffix;
 
-                    // 3. توليد الباسوورد وإظهاره مباشرة كـ Text
-                    const newPass = generateSimplePassword(6); // باسوورد من 6 خانات
                     const passInput = document.getElementById('acctNewPassword');
-                    passInput.value = newPass;
-                    passInput.type = 'text'; // تحويل الحقل لنص ظاهر لتراه مباشرة
+                    passInput.value = generateStrongPassword(10);
+                    passInput.type = 'text';
+
+                    copyBtn?.classList.remove('d-none');
                 }
             } else {
-                // إذا تم اختيار "بدون ربط"، نعيد إخفاء الباسوورد (اختياري)
                 document.getElementById('acctNewPassword').type = 'password';
+                copyBtn?.classList.add('d-none');
             }
         });
+
+        // 4. ميزة نسخ رسالة الواتساب الجذابة عند الضغط على الزر
+        document.getElementById('copyAcctMsgBtn')?.addEventListener('click', async function() {
+            const ptName = document.getElementById('acctNewDisplayName').value.trim();
+            const user = document.getElementById('acctNewUsername').value.trim();
+            const pass = document.getElementById('acctNewPassword').value;
+            
+            const portalUrl = window.location.origin + window.location.pathname.replace('admin.php', 'user.php');
+
+            if (!user || !pass) {
+                showToast('يرجى توليد أو كتابة اليوزر والباسوورد أولاً.', 'warning');
+                return;
+            }
+
+            const whatsappMsg = `🎉 *تم تفعيل حساب ${ptName} بنجاح* 🎉\n\n` +
+                                `👤 *اليوزر:* ${user}\n` +
+                                `🔑 *الباسوورد:* ${pass}\n\n` +
+                                `🌐 *سجل الدخول في الموقع الآتي بيوزرك والباسوورد:*\n` +
+                                `${portalUrl}\n\n` +
+                                `✨ استمتع بالخدمة الفورية! ولأي استفسار أو دعم وإضافة رصيد أيام لكم، معاكم هنا في الواتس دائماً 💬🤝`;
+
+            try {
+                await navigator.clipboard.writeText(whatsappMsg);
+                
+                const originalHtml = this.innerHTML;
+                this.innerHTML = '<i class="bi bi-check2-all"></i> تم النسخ للحافظة بنجاح! ✅';
+                this.classList.remove('btn-outline-success');
+                this.classList.add('btn-success');
+                showToast('تم نسخ رسالة الواتساب! الصقها مباشرة للمريض 📋✨', 'success');
+
+                setTimeout(() => {
+                    this.innerHTML = originalHtml;
+                    this.classList.remove('btn-success');
+                    this.classList.add('btn-outline-success');
+                }, 3000);
+
+            } catch (err) {
+                showToast('فشل النسخ التلقائي، يرجى نسخ البيانات يدوياً.', 'danger');
+            }
+        });
+
+        // 5. حفظ الحساب وإرساله للخادم
         document.getElementById('acctNewUserSave')?.addEventListener('click', async () => {
             const username = document.getElementById('acctNewUsername').value.trim();
             const password = document.getElementById('acctNewPassword').value;
             const displayName = document.getElementById('acctNewDisplayName').value.trim();
-            const role = 'user'; // حسابات المرضى دائماً بدور "مستخدم"
+            const role = 'user';
             const linkPatientId = document.getElementById('acctNewLinkPatient')?.value || '0';
             const allowedDays = document.getElementById('acctNewAllowedDays')?.value || '0';
             if (!username || !password || !displayName) { showToast('يرجى تعبئة جميع الحقول المطلوبة.', 'warning'); return; }
@@ -9843,7 +9894,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 acctLoadData();
             } else { showToast(result.message, 'danger'); }
         });
-
         // Grid click delegation
         document.getElementById('accountsGrid')?.addEventListener('click', async (e) => {
             const addDaysBtn = e.target.closest('.acct-btn-add-days');
