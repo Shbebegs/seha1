@@ -2,7 +2,7 @@
 /**
  * بوابة المرضى - user.php
  * المرضى يُنشئون إجازات مرضية حقيقية بنفس قالب لوحة التحكم
- * (نسخة حديثة كلياً بتصميم احترافي + إخفاء البيانات والإحصائيات افتراضياً + تنبيه التعديل عبر الواتس)
+ * (نسخة فخمة جداً وحديثة كلياً مبنية على Bootstrap 5.3 + إخفاء البيانات افتراضياً + تنبيه التعديل واتس)
  */
 
 ini_set('session.use_only_cookies', '1');
@@ -399,7 +399,7 @@ if ($action === 'create_sick_leave' && isPatientLoggedIn()) {
     exit;
 }
 
-// توليد PDF للإجازة (قالب مخصص بدقة للطباعة)
+// توليد PDF للإجازة (نفس قالب لوحة التحكم المحمي)
 if ($action === 'generate_pdf' && isPatientLoggedIn()) {
     $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']) . '/';
     $leaveId = (int)($_GET['leave_id'] ?? 0);
@@ -679,7 +679,6 @@ a { color: inherit; text-decoration: inherit; }
 .info-table .ar-title { width: 140px; color: rgba(54, 111, 181, 1); font-size: 13.5px; font-weight: 700; font-family: "Noto Sans Arabic", sans-serif; white-space: nowrap; }
 .info-table tr.blue-row td { background-color: #2c3e77; color: #ffffff; border-bottom: 1px solid #cccccc; border-right: 1px solid #cccccc; }
 .info-table tr.blue-row td:last-child { border-right: none; }
-.info-table .blue-row .data-cell.ar-text, .info-table .blue-row .data-cell { color: #ffffff; font-family: "Times New Roman", serif; }
 .info-table tr.gray-row td { background-color: #f7f7f7; }
 .en-spaced { letter-spacing: 0.3px; } :root { --footer-offset: 40px; }
 
@@ -834,872 +833,998 @@ if (isPatientLoggedIn()) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" data-bs-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>بوابة المرضى - Patient Portal</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
 <script>
-// تفعيل الوضع الليلي مباشرة قبل تحميل الصفحة لتجنب الوميض الأبيض (FOUC)
+// تفعيل المظهر المخزن مسبقاً فوراً لتجنب الوميض
 (function() {
-  const currentTheme = localStorage.getItem('theme') || 'light';
-  document.documentElement.setAttribute('data-theme', currentTheme);
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-bs-theme', savedTheme);
 })();
 </script>
+
 <style>
-/* ================= المتغيرات والألوان (Modern SaaS Aesthetic) ================= */
+/* ================= المتغيرات المخصصة والتطوير الجذري (Luxury SaaS) ================= */
 :root {
-  --primary: #0d9488;
-  --primary-light: #14b8a6;
-  --primary-dark: #0f766e;
-  --primary-glow: rgba(13, 148, 136, 0.12);
-  --secondary: #1e293b;
-  --accent: #0284c7;
-  --success: #10b981;
-  --success-bg: #ecfdf5;
-  --success-text: #065f46;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --bg: #f8fafc;
-  --card: #ffffff;
-  --text: #0f172a;
-  --text-muted: #64748b;
-  --border: #e2e8f0;
-  --input-bg: #f1f5f9;
-  --table-hdr: #f8fafc;
-  --table-hover: #f1f5f9;
-  --radius: 20px;
-  --radius-lg: 28px;
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.03);
-  --shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 15px 40px rgba(13, 148, 136, 0.1);
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --nav-bg: rgba(255, 255, 255, 0.85);
-  --nav-border: #e2e8f0;
+    --premium-emerald: #0d9488;
+    --premium-emerald-dark: #0f766e;
+    --premium-emerald-light: #14b8a6;
+    --bg-gradient: linear-gradient(140deg, #f8fafc 0%, #f1f5f9 100%);
+    --premium-card-bg: rgba(255, 255, 255, 0.85);
+    --premium-card-border: rgba(255, 255, 255, 0.6);
+    --premium-shadow: 0 15px 40px rgba(13, 148, 136, 0.08);
+    --premium-shadow-sm: 0 8px 20px rgba(0, 0, 0, 0.04);
+    --input-bg-custom: #f8fafc;
+    --text-color-custom: #0f172a;
 }
 
-[data-theme="dark"] {
-  --primary: #14b8a6;
-  --primary-light: #2dd4bf;
-  --primary-dark: #0d9488;
-  --primary-glow: rgba(20, 184, 166, 0.15);
-  --secondary: #f8fafc;
-  --bg: #070a12;
-  --card: #0f172a;
-  --text: #f1f5f9;
-  --text-muted: #94a3b8;
-  --border: #1e293b;
-  --input-bg: #1e293b;
-  --table-hdr: #1e293b;
-  --table-hover: #161f33;
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
-  --shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 15px 40px rgba(0, 0, 0, 0.8);
-  --success-bg: rgba(16, 185, 129, 0.15);
-  --success-text: #34d399;
-  --nav-bg: rgba(15, 23, 42, 0.85);
-  --nav-border: #1e293b;
+[data-bs-theme="dark"] {
+    --bg-gradient: linear-gradient(140deg, #090d16 0%, #0f172a 100%);
+    --premium-card-bg: rgba(15, 23, 42, 0.85);
+    --premium-card-border: rgba(255, 255, 255, 0.08);
+    --premium-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+    --premium-shadow-sm: 0 8px 20px rgba(0, 0, 0, 0.4);
+    --input-bg-custom: #1e293b;
+    --text-color-custom: #f1f5f9;
 }
 
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; direction:rtl; transition: background-color 0.4s ease, color 0.4s ease; -webkit-font-smoothing: antialiased; }
-
-/* ═══ صفحة تسجيل الدخول (Ultra Modern & Flat) ═══ */
-.login-page {
-  min-height:100vh; display:flex; align-items:center; justify-content:center;
-  background:linear-gradient(-45deg, #0f172a, #0d9488, #0f766e, #0284c7, #0f172a);
-  background-size:400% 400%; animation:gradientShift 15s ease infinite;
-  padding:20px; position:relative; overflow:hidden;
+body {
+    font-family: 'Cairo', sans-serif;
+    background: var(--bg-gradient);
+    color: var(--text-color-custom);
+    min-height: 100vh;
+    transition: background 0.4s ease, color 0.4s ease;
+    overflow-x: hidden;
 }
-.login-card {
-  background:var(--card); 
-  border-radius:var(--radius-lg); padding:48px 40px; width:100%; max-width:440px;
-  box-shadow:0 20px 70px rgba(0,0,0,0.5); animation:slideUp 0.6s cubic-bezier(0.34,1.56,0.64,1);
-  border:1px solid var(--border); position:relative; z-index:2;
+
+/* ═══ صفحة تسجيل الدخول الفخمة ═══ */
+.login-page-luxury {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(-45deg, #0f172a, #0d9488, #0f766e, #0284c7);
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+    padding: 20px;
 }
-.login-icon { text-align:center; font-size:56px; margin-bottom:16px; animation:float 4s ease-in-out infinite; display:block; }
-.login-card h2 { text-align:center; font-size:26px; font-weight:800; color:var(--primary); margin-bottom:6px; }
-.login-card .subtitle { text-align:center; color:var(--text-muted); font-size:14px; margin-bottom:32px; font-weight:500; }
-.form-group { margin-bottom:20px; }
-.form-group label { display:block; font-size:13px; font-weight:700; color:var(--text); margin-bottom:8px; }
-.form-control {
-  width:100%; padding:14px 18px; border:2px solid var(--border); border-radius:14px;
-  font-family:'Cairo',sans-serif; font-size:15px; color:var(--text); background:var(--input-bg); font-weight:600;
-  transition:var(--transition); outline:none; box-shadow:var(--shadow-sm);
+.login-card-premium {
+    background: var(--premium-card-bg);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid var(--premium-card-border);
+    border-radius: 28px;
+    box-shadow: 0 25px 70px rgba(0,0,0,0.5);
+    width: 100%;
+    max-width: 450px;
+    padding: 50px 40px;
+    animation: slideUp 0.6s cubic-bezier(0.34,1.56,0.64,1);
 }
-.form-control:focus { border-color:var(--primary-light); background:var(--card); box-shadow:0 0 0 4px var(--primary-glow); }
-
-.btn {
-  display:inline-flex; align-items:center; justify-content:center; gap:8px;
-  padding:14px 28px; border:none; border-radius:14px; font-family:'Cairo',sans-serif;
-  font-size:15px; font-weight:700; cursor:pointer; transition:var(--transition); text-decoration:none;
+.login-icon-box {
+    font-size: 54px;
+    color: var(--premium-emerald);
+    animation: float 4s ease-in-out infinite;
 }
-.btn-primary { background:linear-gradient(135deg, var(--primary-dark), var(--primary-light)); color:#fff; box-shadow:0 6px 20px var(--primary-glow); }
-.btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 25px var(--primary-glow); filter: brightness(1.05); }
-.btn-full { width:100%; }
 
-.alert { padding:14px 18px; border-radius:14px; font-size:14px; font-weight:700; margin-bottom:20px; line-height: 1.6; }
-.alert-danger { background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid rgba(239, 68, 68, 0.2); }
-.alert-success { background:var(--success-bg); color:var(--success-text); border:1px solid rgba(16, 185, 129, 0.2); }
-.alert-warning { background:rgba(245, 158, 11, 0.1); color:var(--warning); border:1px solid rgba(245, 158, 11, 0.2); }
-
-/* ═══ الشريط العلوي (Navbar زجاجي أنيق) ═══ */
-.navbar {
-  background:var(--nav-bg); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
-  padding:14px 28px; border-bottom:1px solid var(--nav-border);
-  display:flex; align-items:center; justify-content:space-between;
-  box-shadow:0 4px 30px rgba(0,0,0,0.03); position:sticky; top:0; z-index:100;
-  transition: var(--transition);
+/* ═══ الشريط العلوي الفخم (Floating Glass Navbar) ═══ */
+.navbar-premium {
+    background: var(--premium-card-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--premium-card-border);
+    border-radius: 20px;
+    box-shadow: var(--premium-shadow);
+    padding: 14px 24px;
+    margin-top: 20px;
+    margin-bottom: 30px;
+    z-index: 1030;
+    transition: all 0.3s ease;
 }
-.navbar .brand { display:flex; align-items:center; gap:12px; color:var(--text); font-size:18px; font-weight:800; }
-.navbar .brand-icon { width:42px; height:42px; background:linear-gradient(135deg, var(--primary), var(--primary-light)); border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:0 4px 12px var(--primary-glow); }
-.navbar .user-actions { display:flex; align-items:center; gap:12px; }
-.navbar .user-badge { background:var(--input-bg); border:1px solid var(--border); padding:8px 16px; border-radius:50px; display:flex; align-items:center; gap:8px; color:var(--text); font-size:14px; font-weight:700; transition:var(--transition); }
-.btn-icon-nav { background:var(--input-bg); border:1px solid var(--border); color:var(--text); width:42px; height:42px; border-radius:14px; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; transition:var(--transition); box-shadow:var(--shadow-sm); }
-.btn-icon-nav:hover { background:var(--border); transform: scale(1.05); }
-
-.btn-logout { background:rgba(239,68,68,0.1); color:var(--danger); border:1px solid rgba(239,68,68,0.2); padding:10px 18px; border-radius:14px; font-family:'Cairo',sans-serif; font-size:14px; font-weight:700; cursor:pointer; transition:var(--transition); }
-.btn-logout:hover { background:var(--danger); color:#fff; box-shadow:0 4px 15px rgba(239,68,68,0.2); }
-
-/* ═══ المحتوى والتحكم الذكي ═══ */
-.main-content { max-width:1200px; margin:0 auto; padding:36px 20px; }
-
-/* زر إظهار/إخفاء الإحصائيات */
-.toggle-panel-wrap { text-align: center; margin-bottom: 32px; }
-.btn-toggle-stats {
-  background: var(--card); border: 2px solid var(--border); color: var(--text);
-  padding: 14px 32px; border-radius: 50px; font-size: 15px; font-weight: 800;
-  display: inline-flex; align-items: center; gap: 10px; cursor: pointer;
-  transition: var(--transition); box-shadow: var(--shadow); font-family: 'Cairo', sans-serif;
+.navbar-brand-custom {
+    font-weight: 900;
+    font-size: 20px;
+    color: var(--premium-emerald) !important;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
-.btn-toggle-stats:hover { border-color: var(--primary); transform: translateY(-2px); }
-.btn-toggle-stats.active { background: var(--primary-glow); border-color: var(--primary); color: var(--primary); }
-
-/* حاوية الإحصائيات المخفية افتراضياً */
-#statsInfoContainer { transition: var(--transition); }
-
-.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:20px; margin-bottom:36px; }
-.stat-card { background:var(--card); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow); border:1px solid var(--border); display:flex; align-items:center; gap:18px; transition:var(--transition); }
-.stat-card:hover { transform:translateY(-4px); box-shadow:var(--shadow-lg); border-color: var(--primary-light); }
-.stat-icon { width:60px; height:60px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:28px; flex-shrink:0; font-weight:bold; }
-.stat-icon.blue { background:rgba(2, 132, 199, 0.12); color:#0284c7; }
-.stat-icon.green { background:rgba(16, 185, 129, 0.12); color:#10b981; }
-.stat-icon.orange { background:rgba(245, 158, 11, 0.12); color:#f59e0b; }
-.stat-icon.red { background:rgba(239, 68, 68, 0.12); color:#ef4444; }
-.stat-info .num { font-size:32px; font-weight:800; color:var(--text); line-height:1; }
-.stat-info .label { font-size:13px; color:var(--text-muted); margin-top:8px; font-weight:700; }
-
-.card { background:var(--card); border-radius:var(--radius-lg); box-shadow:var(--shadow); border:1px solid var(--border); overflow:hidden; margin-bottom:32px; transition:var(--transition); }
-.card-header { padding:22px 28px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; background:var(--table-hdr); }
-.card-header h3 { font-size:18px; font-weight:800; color:var(--primary); display:flex; align-items:center; gap:10px; }
-.card-body { padding:32px; }
-
-/* إشعار البيانات الثابتة والتواصل */
-.fixed-data-notice {
-  background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(239,68,68,0.05));
-  border: 1px solid rgba(245,158,11,0.3); border-radius: 16px; padding: 18px 24px;
-  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
-  margin-bottom: 24px;
+.brand-icon-lux {
+    background: linear-gradient(135deg, var(--premium-emerald), var(--premium-emerald-light));
+    color: white;
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 15px rgba(13, 148, 136, 0.3);
 }
-.notice-text { display: flex; align-items: center; gap: 12px; }
-.notice-icon { font-size: 24px; flex-shrink: 0; }
-.notice-title { font-size: 14px; font-weight: 800; color: var(--text); display: block; }
-.notice-desc { font-size: 13px; font-weight: 600; color: var(--text-muted); }
-
-.btn-whatsapp-sm {
-  background: #25d366; color: #fff; padding: 10px 20px; border-radius: 12px;
-  font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; gap: 8px;
-  text-decoration: none; box-shadow: 0 4px 15px rgba(37,211,102,0.2); transition: var(--transition);
+.user-badge-premium {
+    background: var(--input-bg-custom);
+    border: 1px solid rgba(13, 148, 136, 0.3);
+    padding: 8px 18px;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: 14px;
 }
-.btn-whatsapp-sm:hover { background: #128c7e; transform: translateY(-2px); }
 
-.patient-info-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px; }
-.info-field { background:var(--input-bg); border:1px solid var(--border); border-radius:16px; padding:16px 20px; transition:var(--transition); box-shadow:var(--shadow-sm); position: relative; overflow: hidden; }
-.info-field:hover { border-color: var(--text-muted); }
-.info-field .field-label { font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:block; }
-.info-field .field-value { font-size:16px; font-weight:700; color:var(--text); }
-.info-field .field-value-en { font-size:13px; color:var(--text-muted); direction:ltr; text-align:left; margin-top:4px; font-family: 'Inter', sans-serif; font-weight:500; }
-.info-badge-lock { position: absolute; top: 12px; left: 12px; font-size: 11px; color: var(--text-muted); background: var(--card); padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); font-weight: 700; }
+/* ═══ البطاقات الزجاجية الفخمة ═══ */
+.card-luxury {
+    background: var(--premium-card-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--premium-card-border);
+    border-radius: 24px;
+    box-shadow: var(--premium-shadow);
+    overflow: hidden;
+    margin-bottom: 35px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.card-luxury:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 50px rgba(13, 148, 136, 0.12);
+}
+.card-header-luxury {
+    background: transparent;
+    border-bottom: 1px solid rgba(13, 148, 136, 0.15);
+    padding: 24px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.card-title-luxury {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--premium-emerald);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
 
-.quota-bar-wrap { background:var(--input-bg); border-radius:50px; height:16px; overflow:hidden; margin:14px 0; border:1px solid var(--border); box-shadow:inset 0 2px 4px rgba(0,0,0,0.05); }
-.quota-bar { height:100%; border-radius:50px; background:linear-gradient(90deg, var(--success), #34d399); transition:width 1s cubic-bezier(0.4, 0, 0.2, 1); }
-.quota-bar.warning { background:linear-gradient(90deg, var(--warning), #fbbf24); }
-.quota-bar.danger { background:linear-gradient(90deg, var(--danger), #f87171); }
+/* ═══ زر إظهار/إخفاء البيانات العريض والأنيق ═══ */
+.btn-toggle-banner {
+    background: var(--premium-card-bg);
+    backdrop-filter: blur(10px);
+    border: 2px solid var(--premium-emerald);
+    color: var(--premium-emerald);
+    padding: 16px 35px;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 900;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    box-shadow: var(--premium-shadow-sm);
+    transition: all 0.3s ease;
+}
+.btn-toggle-banner:hover, .btn-toggle-banner.active {
+    background: var(--premium-emerald);
+    color: white;
+    box-shadow: 0 10px 25px rgba(13, 148, 136, 0.3);
+    transform: translateY(-2px);
+}
 
-.leave-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
-@media (max-width:768px) { .leave-form-grid { grid-template-columns:1fr; } }
-.form-label { display:block; font-size:14px; font-weight:800; color:var(--text); margin-bottom:10px; }
-.form-select { width:100%; padding:14px 18px; border:2px solid var(--border); border-radius:14px; font-family:'Cairo',sans-serif; font-size:15px; color:var(--text); background:var(--input-bg); transition:var(--transition); outline:none; cursor:pointer; font-weight:700; box-shadow:var(--shadow-sm); }
-.form-select:focus { border-color:var(--primary-light); background:var(--card); box-shadow:0 0 0 4px var(--primary-glow); }
-.form-select option { background: var(--card); color: var(--text); font-weight:600; }
+/* ═══ إشعار البيانات الثابتة والتواصل واتس ═══ */
+.fixed-notice-luxury {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(239, 68, 68, 0.03));
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 20px;
+    padding: 22px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+.btn-whatsapp-premium {
+    background: linear-gradient(135deg, #25d366, #128c7e);
+    color: white !important;
+    padding: 12px 28px;
+    border-radius: 14px;
+    font-weight: 800;
+    font-size: 15px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    box-shadow: 0 8px 20px rgba(37, 211, 102, 0.3);
+    transition: all 0.3s ease;
+}
+.btn-whatsapp-premium:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 25px rgba(37, 211, 102, 0.4);
+}
 
-.time-mode-tabs { display:flex; gap:10px; margin-bottom:14px; }
-.time-tab { flex:1; padding:12px; border:2px solid var(--border); border-radius:14px; background:var(--input-bg); font-family:'Cairo',sans-serif; font-size:14px; font-weight:800; cursor:pointer; transition:var(--transition); text-align:center; color:var(--text-muted); box-shadow:var(--shadow-sm); }
-.time-tab.active { border-color:var(--primary); background:var(--primary-glow); color:var(--primary); }
-.time-tab:hover:not(.active) { border-color:var(--text-muted); }
+/* ═══ الحقول والأزرار ═══ */
+.form-control-lux, .form-select-lux {
+    border-radius: 16px;
+    border: 2px solid rgba(13, 148, 136, 0.2);
+    padding: 15px 20px;
+    background: var(--input-bg-custom);
+    color: var(--text-color-custom);
+    font-weight: 700;
+    font-size: 15px;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+.form-control-lux:focus, .form-select-lux:focus {
+    border-color: var(--premium-emerald);
+    background: transparent;
+    box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.15);
+}
+.form-label-lux {
+    font-weight: 800;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+.btn-emerald-lux {
+    background: linear-gradient(135deg, var(--premium-emerald), var(--premium-emerald-dark));
+    color: white !important;
+    border: none;
+    border-radius: 16px;
+    padding: 16px 36px;
+    font-weight: 900;
+    font-size: 16px;
+    box-shadow: 0 8px 25px rgba(13, 148, 136, 0.3);
+    transition: all 0.3s ease;
+}
+.btn-emerald-lux:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(13, 148, 136, 0.4);
+    filter: brightness(1.05);
+}
 
-.leaves-table { width:100%; border-collapse:collapse; font-size:15px; }
-.leaves-table th { background:var(--table-hdr); padding:16px 20px; text-align:right; font-weight:800; color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:2px solid var(--border); white-space:nowrap; }
-.leaves-table td { padding:18px 20px; border-bottom:1px solid var(--border); vertical-align:middle; color:var(--text); font-weight:600; }
-.leaves-table tr:hover td { background:var(--table-hover); }
+/* ═══ الإحصائيات والبيانات الشخصية ═══ */
+.stat-box-lux {
+    background: var(--premium-card-bg);
+    border: 1px solid var(--premium-card-border);
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: var(--premium-shadow-sm);
+    height: 100%;
+}
+.stat-icon-lux {
+    width: 65px;
+    height: 65px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+}
+.info-field-box {
+    background: var(--input-bg-custom);
+    border: 1px solid rgba(13, 148, 136, 0.15);
+    border-radius: 16px;
+    padding: 18px 22px;
+    position: relative;
+    height: 100%;
+}
+.badge-lock-fixed {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    font-size: 11px;
+    font-weight: 900;
+    background: rgba(245, 158, 11, 0.15);
+    color: #d97706;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
 
-.btn-sm { padding:10px 18px; font-size:14px; border-radius:12px; }
-.btn-outline { background:transparent; border:2px solid var(--primary-light); color:var(--primary); font-weight:800; box-shadow:none; }
-.btn-outline:hover { background:var(--primary); color:#fff; border-color:var(--primary); box-shadow:0 4px 15px var(--primary-glow); }
-
-.toast-container { position:fixed; top:90px; left:50%; transform:translateX(-50%); z-index:9999; display:flex; flex-direction:column; gap:12px; pointer-events:none; width:90%; max-width:450px; }
-.toast { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px 24px; box-shadow:0 20px 60px rgba(0,0,0,0.3); font-size:15px; font-weight:800; display:flex; align-items:center; gap:14px; width:100%; animation:slideDown 0.4s cubic-bezier(0.34,1.56,0.64,1); border-right:6px solid var(--primary); color:var(--text); backdrop-filter:blur(10px); }
-.toast.success { border-color:var(--success); }
-.toast.error { border-color:var(--danger); }
-.toast.warning { border-color:var(--warning); }
-
-.spinner { width:22px; height:22px; border:3px solid rgba(255,255,255,0.3); border-top-color:#fff; border-radius:50%; animation:spin 0.8s linear infinite; display:inline-block; vertical-align: middle; }
-.empty-state { text-align:center; padding:70px 20px; color:var(--text-muted); }
-.empty-state .empty-icon { font-size:72px; margin-bottom:20px; opacity:0.8; display:block; }
-.empty-state h4 { font-size:20px; font-weight:800; margin-bottom:10px; color:var(--text); }
-.empty-state p { font-size:15px; font-weight:600; max-width:500px; margin:0 auto; line-height:1.6; }
-
-.days-counter { display:flex; align-items:center; gap:10px; font-size:14px; font-weight:800; color:var(--text-muted); margin-top:10px; flex-wrap:wrap; }
-.days-counter .used { color:var(--danger); }
-.days-counter .remaining { color:var(--success); }
-.days-counter .total { color:var(--primary); }
-
+/* ═══ الحركات الانتقالية ═══ */
 @keyframes gradientShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
 @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
 @keyframes slideUp { from{opacity:0;transform:translateY(40px)} to{opacity:1;transform:translateY(0)} }
-@keyframes slideDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
-@keyframes spin { to{transform:rotate(360deg)} }
 
-/* لوحة الإشعارات */
-.notif-panel-box { background:var(--card); border:1px solid var(--border); border-radius:20px; box-shadow:0 20px 70px rgba(0,0,0,0.6); overflow:hidden; }
-.notif-item { padding:16px 20px; border-bottom:1px solid var(--border); transition:var(--transition); }
-.notif-item:hover { background:var(--table-hover); }
-.notif-item.unread { background:var(--primary-glow); border-right:4px solid var(--primary); }
-
-/* تحسين التجاوب لشاشات الهواتف */
-@media (max-width: 640px) {
-  .navbar { padding:12px 16px; }
-  .navbar .brand span { font-size:16px; }
-  .navbar .user-badge { display:none; }
-  .card-header { padding:18px 20px; }
-  .card-body { padding:20px; }
-  .leaves-table td, .leaves-table th { padding:12px 14px; font-size:14px; }
-  .btn-toggle-stats { width: 100%; justify-content: center; }
-  .fixed-data-notice { flex-direction: column; align-items: flex-start; }
+/* ═══ التنبيهات المخصصة (Custom Overlay Toast) ═══ */
+.toast-overlay-container {
+    position: fixed;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+    width: 90%;
+    max-width: 480px;
 }
+.toast-lux {
+    background: var(--premium-card-bg);
+    backdrop-filter: blur(15px);
+    border: 1px solid var(--premium-card-border);
+    border-radius: 18px;
+    padding: 20px 25px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    font-weight: 800;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border-right: 6px solid var(--premium-emerald);
+    animation: slideDown 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes slideDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
 </style>
 </head>
 <body>
 
 <?php if (!isPatientLoggedIn()): ?>
-<div class="login-page">
-  <div class="login-card">
-    <span class="login-icon">🏥</span>
-    <h2>بوابة المرضى</h2>
-    <p class="subtitle">Patient Portal — سجّل دخولك للوصول إلى ملفك الطبي</p>
+<div class="login-page-luxury">
+    <div class="login-card-premium">
+        <div class="text-center mb-5">
+            <div class="login-icon-box mb-3">
+                <i class="fa-solid fa-house-chimney-medical"></i>
+            </div>
+            <h2 class="fw-black text-gradient" style="font-weight: 900; color: var(--premium-emerald);">بوابة المرضى</h2>
+            <p class="text-muted fw-bold mt-1">سجّل دخولك للوصول إلى ملفك الطبي وإصدار الإجازات</p>
+        </div>
 
-    <?php if (!empty($_GET['disabled'])): ?>
-    <div class="alert alert-danger">⚠️ تم تعطيل حسابك. يرجى التواصل مع الإدارة.</div>
-    <?php endif; ?>
+        <?php if (!empty($_GET['disabled'])): ?>
+        <div class="alert alert-danger fw-bold rounded-4 p-3 mb-4"><i class="fa-solid fa-triangle-exclamation me-2"></i> تم تعطيل حسابك. يرجى التواصل مع الإدارة.</div>
+        <?php endif; ?>
 
-    <?php if (!empty($loginError)): ?>
-    <div class="alert alert-danger">⚠️ <?= htmlspecialchars($loginError) ?></div>
-    <?php endif; ?>
+        <?php if (!empty($loginError)): ?>
+        <div class="alert alert-danger fw-bold rounded-4 p-3 mb-4"><i class="fa-solid fa-circle-exclamation me-2"></i> <?= htmlspecialchars($loginError) ?></div>
+        <?php endif; ?>
 
-    <form method="POST" action="user.php">
-      <input type="hidden" name="action" value="patient_login">
-      <?= patient_csrf_input() ?>
-      <div class="form-group">
-        <label for="username">اسم المستخدم</label>
-        <input type="text" id="username" name="username" class="form-control"
-               placeholder="أدخل اسم المستخدم" autocomplete="username" required
-               value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
-      </div>
-      <div class="form-group">
-        <label for="password">كلمة المرور</label>
-        <input type="password" id="password" name="password" class="form-control"
-               placeholder="أدخل كلمة المرور" autocomplete="current-password" required>
-      </div>
-      <button type="submit" class="btn btn-primary btn-full" style="margin-top:10px;">
-        🔐 تسجيل الدخول
-      </button>
-    </form>
-    <p style="text-align:center;margin-top:28px;font-size:14px;color:var(--text-muted);font-weight:700;">
-      للحصول على حساب، يرجى التواصل مع الإدارة
-    </p>
-  </div>
+        <form method="POST" action="user.php">
+            <input type="hidden" name="action" value="patient_login">
+            <?= patient_csrf_input() ?>
+            
+            <div class="form-floating mb-4">
+                <input type="text" id="username" name="username" class="form-control form-control-lux" placeholder="اسم المستخدم" autocomplete="username" required value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
+                <label for="username" class="fw-bold"><i class="fa-solid fa-user me-2 text-muted"></i> اسم المستخدم</label>
+            </div>
+            
+            <div class="form-floating mb-4">
+                <input type="password" id="password" name="password" class="form-control form-control-lux" placeholder="كلمة المرور" autocomplete="current-password" required>
+                <label for="password" class="fw-bold"><i class="fa-solid fa-lock me-2 text-muted"></i> كلمة المرور</label>
+            </div>
+            
+            <button type="submit" class="btn btn-emerald-lux w-100 mt-2">
+                <i class="fa-solid fa-arrow-right-to-bracket me-2"></i> تسجيل الدخول
+            </button>
+        </form>
+        
+        <div class="text-center mt-5">
+            <span class="text-muted fw-bold fs-7"><i class="fa-solid fa-headset me-1"></i> للحصول على حساب، يرجى التواصل مع الإدارة</span>
+        </div>
+    </div>
 </div>
 
 <?php else: ?>
-<nav class="navbar">
-  <div class="brand">
-    <div class="brand-icon">🏥</div>
-    <span>بوابة المرضى</span>
-  </div>
-  
-  <div class="user-actions">
-    <button id="themeToggleBtn" class="btn-icon-nav" onclick="toggleTheme()" title="تبديل المظهر">
-      <span id="themeIcon">☀️</span>
-    </button>
 
-    <div style="position:relative;">
-      <button id="notifBell" class="btn-icon-nav" onclick="toggleNotifPanel()" title="الإشعارات" style="position:relative;">
-        🔔
-        <span id="notifBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:20px;height:20px;font-size:11px;font-weight:800;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,0.3);"></span>
-      </button>
-      
-      <div id="notifPanel" class="notif-panel-box" style="display:none;position:absolute;top:58px;left:0;width:360px;z-index:999;">
-        <div style="padding:16px 20px;background:linear-gradient(135deg, var(--primary-dark), var(--primary));color:#fff;display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-weight:800;font-size:15px;">🔔 الإشعارات</span>
-          <button onclick="markAllRead()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:6px 12px;border-radius:10px;font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:800;transition:var(--transition);">تحديد كمقروء</button>
+<div class="container-fluid px-3 px-xl-5">
+    <nav class="navbar navbar-expand-md navbar-premium d-flex align-items-center justify-content-between">
+        <div class="navbar-brand-custom">
+            <div class="brand-icon-lux"><i class="fa-solid fa-hospital-user fs-5"></i></div>
+            <span>بوابة المرضى</span>
         </div>
-        <div id="notifList" style="max-height:350px;overflow-y:auto;">
-          <div style="text-align:center;padding:30px;color:var(--text-muted);font-size:14px;font-weight:700;">جاري التحميل...</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="user-badge">
-      <span>👤</span>
-      <span><?= htmlspecialchars($_SESSION['patient_display_name']) ?></span>
-    </div>
-
-    <form method="POST" action="user.php" style="margin:0;">
-      <input type="hidden" name="action" value="logout">
-      <button type="submit" class="btn-logout">تسجيل الخروج</button>
-    </form>
-  </div>
-</nav>
-
-<div class="main-content">
-
-  <div class="toggle-panel-wrap">
-    <button type="button" id="toggleStatsBtn" class="btn-toggle-stats" onclick="toggleStatsInfo()">
-      📊 إظهار الإحصائيات والبيانات الشخصية
-    </button>
-  </div>
-
-  <div id="statsInfoContainer" style="display:none;">
-    
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon blue">📋</div>
-        <div class="stat-info">
-          <div class="num"><?= $allowedDays ?></div>
-          <div class="label">إجمالي الأيام المسموحة</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon green">✅</div>
-        <div class="stat-info">
-          <div class="num"><?= $remainingDays ?></div>
-          <div class="label">الأيام المتبقية الحالية</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon orange">📅</div>
-        <div class="stat-info">
-          <div class="num"><?= $usedDays ?></div>
-          <div class="label">الأيام المستخدمة</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon red">📄</div>
-        <div class="stat-info">
-          <div class="num"><?= count($myLeaves) ?></div>
-          <div class="label">إجمالي الإجازات المُصدرة</div>
-        </div>
-      </div>
-    </div>
-
-    <?php if ($patientData): ?>
-    <div class="card">
-      <div class="card-header">
-        <h3>👤 بياناتي الشخصية والوظيفية</h3>
-      </div>
-      <div class="card-body">
         
-        <div class="fixed-data-notice">
-          <div class="notice-text">
-            <span class="notice-icon">🔒</span>
-            <div>
-              <span class="notice-title">البيانات ثابتة ومحمية</span>
-              <span class="notice-desc">هذه البيانات مسجلة رسمياً ولا يمكن تغييرها ذاتياً. إذا كان هناك خطأ وتريد التعديل، تواصل معنا.</span>
+        <div class="d-flex align-items-center gap-2 gap-sm-3">
+            <button class="btn btn-outline-secondary border-0 rounded-circle w-40 h-40 d-flex align-items-center justify-content-center" onclick="toggleTheme()" title="تبديل المظهر">
+                <i id="themeIcon" class="fa-solid fa-sun fs-5"></i>
+            </button>
+
+            <div class="position-relative">
+                <button id="notifBell" class="btn btn-outline-secondary border-0 rounded-circle w-40 h-40 d-flex align-items-center justify-content-center position-relative" onclick="toggleNotifPanel()" title="الإشعارات">
+                    <i class="fa-solid fa-bell fs-5"></i>
+                    <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none; font-family: sans-serif;"></span>
+                </button>
+                
+                <div id="notifPanel" class="position-absolute start-0 mt-2 card-luxury p-0" style="display: none; width: 340px; z-index: 1050;">
+                    <div class="p-3 bg-gradient d-flex align-items-center justify-content-between border-bottom">
+                        <span class="fw-black"><i class="fa-solid fa-bell me-2 text-warning"></i> الإشعارات</span>
+                        <button class="btn btn-sm btn-outline-secondary rounded-pill fw-bold fs-8 py-1 px-2" onclick="markAllRead()">تحديد كمقروء</button>
+                    </div>
+                    <div id="notifList" style="max-height: 320px; overflow-y: auto;">
+                        <div class="text-center p-4 text-muted fw-bold fs-7">جاري التحميل...</div>
+                    </div>
+                </div>
             </div>
-          </div>
-          <a href="https://wa.me/966573436223?text=أهلاً،%20أريد%20تعديل%20بياناتي%20في%20بوابة%20المرضى" target="_blank" class="btn-whatsapp-sm">
-            💬 التواصل واتس للتعديل
-          </a>
-        </div>
 
-        <div class="patient-info-grid">
-          <div class="info-field">
-            <span class="info-badge-lock">ثابت</span>
-            <span class="field-label">الاسم بالعربية</span>
-            <div class="field-value"><?= htmlspecialchars($patientData['name_ar'] ?? $patientData['name'] ?? '') ?></div>
-            <?php if (!empty($patientData['name_en'])): ?>
-            <div class="field-value-en"><?= htmlspecialchars($patientData['name_en']) ?></div>
+            <div class="user-badge-premium d-none d-sm-flex align-items-center gap-2">
+                <i class="fa-solid fa-circle-user text-muted fs-5"></i>
+                <span><?= htmlspecialchars($_SESSION['patient_display_name']) ?></span>
+            </div>
+
+            <form method="POST" action="user.php" class="m-0">
+                <input type="hidden" name="action" value="logout">
+                <button type="submit" class="btn btn-outline-danger rounded-pill fw-black px-3 py-2 fs-7 border-0 bg-danger-subtle">
+                    <i class="fa-solid fa-power-off"></i>
+                </button>
+            </form>
+        </div>
+    </nav>
+</div>
+
+<div class="container-fluid px-3 px-xl-5 pb-5">
+
+    <?php if ($remainingDays > 0): ?>
+    <div class="card-luxury">
+        <div class="card-header-luxury">
+            <h3 class="card-title-luxury"><i class="fa-solid fa-file-signature"></i> إصدار إجازة مرضية جديدة (فورية)</h3>
+            <span class="badge rounded-pill bg-success-subtle text-success fw-black px-4 py-2 fs-6 border border-success-subtle">
+                <i class="fa-solid fa-check-double me-1"></i> الرصيد المتاح: <?= $remainingDays ?> يوم
+            </span>
+        </div>
+        <div class="p-4 p-md-5">
+            <form id="leaveForm">
+                <div class="row g-4">
+                    
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label-lux"><i class="fa-regular fa-hospital text-muted me-1"></i> المستشفى / المنشأة الطبية <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-lux" id="hospitalSelect" name="hospital_id" required onchange="loadDoctors(this.value)">
+                            <option value="">-- يرجى اختيار المنشأة --</option>
+                            <?php foreach ($hospitals as $h): ?>
+                            <option value="<?= $h['id'] ?>"><?= htmlspecialchars($h['name_ar']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label-lux"><i class="fa-solid fa-user-doctor text-muted me-1"></i> الطبيب المعالج <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-lux" id="doctorSelect" name="doctor_id" required>
+                            <option value="">-- اختر المستشفى أولاً --</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <label class="form-label-lux"><i class="fa-regular fa-calendar-plus text-muted me-1"></i> تاريخ بداية الإجازة <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control form-control-lux" id="startDate" name="start_date" required min="<?= date('Y-m-d') ?>" onchange="calcDays()">
+                    </div>
+
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <label class="form-label-lux"><i class="fa-regular fa-calendar-check text-muted me-1"></i> تاريخ نهاية الإجازة <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control form-control-lux" id="endDate" name="end_date" required min="<?= date('Y-m-d') ?>" onchange="calcDays()">
+                    </div>
+
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <label class="form-label-lux"><i class="fa-solid fa-calculator text-muted me-1"></i> المدة المحسوبة</label>
+                        <input type="number" class="form-control form-control-lux text-primary fw-black" id="daysDisplay" readonly placeholder="تُحسب تلقائياً" style="cursor: not-allowed;">
+                        <input type="hidden" id="daysCount" name="days_count">
+                    </div>
+
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <label class="form-label-lux"><i class="fa-regular fa-clock text-muted me-1"></i> توقيت التوثيق والإصدار</label>
+                        <div class="btn-group w-100" role="group">
+                            <button type="button" class="btn btn-outline-secondary time-tab active fw-black rounded-end-4" onclick="setTimeMode('auto',this)">تلقائي</button>
+                            <button type="button" class="btn btn-outline-secondary time-tab fw-black" onclick="setTimeMode('random',this)">عشوائي</button>
+                            <button type="button" class="btn btn-outline-secondary time-tab fw-black rounded-start-4" onclick="setTimeMode('manual',this)">يدوي</button>
+                        </div>
+                        <input type="hidden" id="timeModeInput" name="time_mode" value="auto">
+                    </div>
+
+                    <div class="col-12" id="daysWarning" style="display:none;"></div>
+
+                    <div class="col-12" id="manualTimeFields" style="display:none;">
+                        <div class="card p-3 rounded-4 bg-light-subtle border-0">
+                            <div class="row g-3 align-items-center">
+                                <div class="col-auto"><span class="fw-bold fs-7"><i class="fa-solid fa-stopwatch me-1"></i> حدد الوقت بدقة:</span></div>
+                                <div class="col-12 col-sm"><input type="time" class="form-control form-control-lux" id="manualTimeInput" name="manual_time"></div>
+                                <div class="col-12 col-sm-auto">
+                                    <select class="form-select form-select-lux w-100" name="manual_period">
+                                        <option value="AM">صباحاً (AM)</option>
+                                        <option value="PM">مساءً (PM)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-2">
+                        <div id="autoTimeInfo" class="text-muted fw-bold fs-7"><i class="fa-solid fa-circle-info text-primary me-1"></i> سيُعتمد التوقيت الفعلي للحظة الضغط على الزر برمجياً.</div>
+                    </div>
+
+                </div>
+
+                <div class="d-flex justify-content-end mt-5">
+                    <button type="button" class="btn-emerald-lux" onclick="createLeave()" id="submitBtn">
+                        <i class="fa-solid fa-cloud-arrow-up me-2"></i> اعتماد وإصدار الإجازة الفورية
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <?php else: ?>
+    <div class="card-luxury p-5 text-center">
+        <i class="fa-solid fa-ban text-danger fs-1 mb-3"></i>
+        <h3 class="fw-black">تعذر إصدار إجازات إضافية</h3>
+        <p class="text-muted fw-bold max-w-600 mx-auto mt-2 mb-4">
+            <?php if ($allowedDays === 0): ?>
+            لقد استخدمت رصيدك من الأيام كاملاً. إذا كنت تريد الإضافة تواصل معنا في الواتس.
+            <?php else: ?>
+            لقد استنفدت كامل رصيدك المسموح به (<?= $allowedDays ?> يوم). لطلب تمديد أو استثناء يرجى التواصل معنا.
             <?php endif; ?>
-          </div>
-          <div class="info-field">
-            <span class="info-badge-lock">ثابت</span>
-            <span class="field-label">رقم الهوية / الإقامة</span>
-            <div class="field-value" style="direction:ltr;text-align:right;"><?= htmlspecialchars($patientData['identity_number'] ?? '') ?></div>
-          </div>
-          <?php if (!empty($patientData['nationality_ar'])): ?>
-          <div class="info-field">
-            <span class="info-badge-lock">ثابت</span>
-            <span class="field-label">الجنسية</span>
-            <div class="field-value"><?= htmlspecialchars($patientData['nationality_ar']) ?></div>
-            <?php if (!empty($patientData['nationality_en'])): ?><div class="field-value-en"><?= htmlspecialchars($patientData['nationality_en']) ?></div><?php endif; ?>
-          </div>
-          <?php endif; ?>
-          <?php if (!empty($patientData['employer_ar'])): ?>
-          <div class="info-field">
-            <span class="info-badge-lock">ثابت</span>
-            <span class="field-label">جهة العمل</span>
-            <div class="field-value"><?= htmlspecialchars($patientData['employer_ar']) ?></div>
-            <?php if (!empty($patientData['employer_en'])): ?><div class="field-value-en"><?= htmlspecialchars($patientData['employer_en']) ?></div><?php endif; ?>
-          </div>
-          <?php endif; ?>
-          <?php if (!empty($patientData['phone'])): ?>
-          <div class="info-field">
-            <span class="info-badge-lock">ثابت</span>
-            <span class="field-label">رقم الجوال</span>
-            <div class="field-value" style="direction:ltr;text-align:right;"><?= htmlspecialchars($patientData['phone']) ?></div>
-          </div>
-          <?php endif; ?>
-        </div>
-
-        <div style="margin-top:28px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <span style="font-size:15px;font-weight:800;color:var(--text);">حصة الإجازات المرضية المستهلكة</span>
-            <span style="font-size:15px;font-weight:900;color:var(--primary);"><?= $usedDays ?> / <?= $allowedDays ?> يوم</span>
-          </div>
-          <?php
-            $pct = $allowedDays > 0 ? min(100, round($usedDays / $allowedDays * 100)) : 0;
-            $barClass = $pct >= 90 ? 'danger' : ($pct >= 60 ? 'warning' : '');
-          ?>
-          <div class="quota-bar-wrap">
-            <div class="quota-bar <?= $barClass ?>" style="width:<?= $pct ?>%"></div>
-          </div>
-          <div class="days-counter">
-            <span>مستخدم: <span class="used"><?= $usedDays ?></span></span>
-            <span>•</span>
-            <span>متبقي: <span class="remaining"><?= $remainingDays ?></span></span>
-            <span>•</span>
-            <span>المسموح الكلي: <span class="total"><?= $allowedDays ?></span></span>
-          </div>
-        </div>
-
-      </div>
+        </p>
+        <a href="https://wa.me/966573436223" target="_blank" class="btn-whatsapp-premium mx-auto">
+            <i class="fa-brands fa-whatsapp fs-4"></i> تواصل مع الدعم الفني (واتساب)
+        </a>
     </div>
     <?php endif; ?>
 
-  </div>
-  <?php if ($remainingDays > 0): ?>
-  <div class="card">
-    <div class="card-header">
-      <h3>📝 إصدار إجازة مرضية جديدة (فورية)</h3>
-      <span style="font-size:14px;background:var(--success-bg);color:var(--success-text);padding:8px 16px;border-radius:50px;font-weight:900;box-shadow:var(--shadow-sm);">
-        الرصيد المتاح: <?= $remainingDays ?> يوم
-      </span>
+    <div class="text-center my-5">
+        <button type="button" id="toggleStatsBtn" class="btn-toggle-banner" onclick="toggleStatsInfo()">
+            <i class="fa-solid fa-chart-pie fs-5"></i>
+            <span>إظهار الإحصائيات والبيانات الشخصية للمريض</span>
+        </button>
     </div>
-    <div class="card-body">
-      <form id="leaveForm">
-        <div class="leave-form-grid">
 
-          <div>
-            <label class="form-label">🏥 المستشفى / المنشأة الطبية <span style="color:var(--danger)">*</span></label>
-            <select class="form-select" id="hospitalSelect" name="hospital_id" required onchange="loadDoctors(this.value)">
-              <option value="">-- يرجى اختيار المنشأة --</option>
-              <?php foreach ($hospitals as $h): ?>
-              <option value="<?= $h['id'] ?>"><?= htmlspecialchars($h['name_ar']) ?></option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-
-          <div>
-            <label class="form-label">👨‍⚕️ الطبيب المعالج <span style="color:var(--danger)">*</span></label>
-            <select class="form-select" id="doctorSelect" name="doctor_id" required>
-              <option value="">-- اختر المستشفى أولاً --</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="form-label">📅 تاريخ بداية الإجازة <span style="color:var(--danger)">*</span></label>
-            <input type="date" class="form-control" id="startDate" name="start_date" required
-                   min="<?= date('Y-m-d') ?>" onchange="calcDays()">
-          </div>
-
-          <div>
-            <label class="form-label">📅 تاريخ نهاية الإجازة <span style="color:var(--danger)">*</span></label>
-            <input type="date" class="form-control" id="endDate" name="end_date" required
-                   min="<?= date('Y-m-d') ?>" onchange="calcDays()">
-          </div>
-
-          <div>
-            <label class="form-label">🔢 المدة المحسوبة</label>
-            <input type="number" class="form-control" id="daysDisplay" readonly
-                   placeholder="تُحسب برمجياً وبشكل تلقائي" style="background:var(--input-bg);cursor:not-allowed;font-weight:800;color:var(--primary);">
-            <input type="hidden" id="daysCount" name="days_count">
-            <div id="daysWarning" style="display:none;margin-top:12px;" class="alert alert-warning"></div>
-          </div>
-
-          <div>
-            <label class="form-label">🕐 توقيت التوثيق والإصدار</label>
-            <div class="time-mode-tabs">
-              <button type="button" class="time-tab active" onclick="setTimeMode('auto',this)">تلقائي</button>
-              <button type="button" class="time-tab" onclick="setTimeMode('random',this)">عشوائي</button>
-              <button type="button" class="time-tab" onclick="setTimeMode('manual',this)">تحديد يدوي</button>
+    <div id="statsInfoContainer" style="display: none;">
+        
+        <div class="row g-4 mb-5">
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="stat-box-lux">
+                    <div class="stat-icon-lux bg-primary-subtle text-primary"><i class="fa-solid fa-clipboard-check"></i></div>
+                    <div>
+                        <div class="fs-2 fw-black line-height-1"><?= $allowedDays ?></div>
+                        <div class="text-muted fw-bold fs-7 mt-1">إجمالي الأيام المسموحة</div>
+                    </div>
+                </div>
             </div>
-            <input type="hidden" id="timeModeInput" name="time_mode" value="auto">
-            <div id="manualTimeFields" style="display:none;">
-              <div style="display:flex;gap:12px;align-items:center;">
-                <input type="time" class="form-control" id="manualTimeInput" name="manual_time" style="flex:1;">
-                <select class="form-select" name="manual_period" style="width:120px;">
-                  <option value="AM">صباحاً</option>
-                  <option value="PM">مساءً</option>
-                </select>
-              </div>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="stat-box-lux">
+                    <div class="stat-icon-lux bg-success-subtle text-success"><i class="fa-solid fa-shield-check"></i></div>
+                    <div>
+                        <div class="fs-2 fw-black line-height-1"><?= $remainingDays ?></div>
+                        <div class="text-muted fw-bold fs-7 mt-1">الأيام المتبقية الحالية</div>
+                    </div>
+                </div>
             </div>
-            <div id="autoTimeInfo" style="font-size:13px;color:var(--text-muted);margin-top:8px;font-weight:700;">
-              ⏰ سيُعتمد التوقيت الفعلي للحظة الضغط على الزر
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="stat-box-lux">
+                    <div class="stat-icon-lux bg-warning-subtle text-warning"><i class="fa-solid fa-calendar-days"></i></div>
+                    <div>
+                        <div class="fs-2 fw-black line-height-1"><?= $usedDays ?></div>
+                        <div class="text-muted fw-bold fs-7 mt-1">الأيام المستخدمة</div>
+                    </div>
+                </div>
             </div>
-          </div>
-
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="stat-box-lux">
+                    <div class="stat-icon-lux bg-danger-subtle text-danger"><i class="fa-solid fa-file-contract"></i></div>
+                    <div>
+                        <div class="fs-2 fw-black line-height-1"><?= count($myLeaves) ?></div>
+                        <div class="text-muted fw-bold fs-7 mt-1">إجمالي الإجازات المُصدرة</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div style="margin-top:32px;display:flex;justify-content:flex-end;">
-          <button type="button" class="btn btn-primary" onclick="createLeave()" id="submitBtn" style="padding:16px 36px;font-size:16px;">
-            📄 اعتماد وإصدار الإجازة الفورية
-          </button>
+        <?php if ($patientData): ?>
+        <div class="card-luxury">
+            <div class="card-header-luxury">
+                <h3 class="card-title-luxury"><i class="fa-solid fa-id-card-clip"></i> بياناتي الشخصية والوظيفية</h3>
+            </div>
+            <div class="p-4 p-md-5">
+                
+                <div class="fixed-notice-luxury">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="fa-solid fa-lock text-warning fs-1"></i>
+                        <div>
+                            <span class="fw-black d-block fs-5 text-warning-emphasis mb-1">البيانات ثابتة ومحمية بالنظام</span>
+                            <span class="text-muted fw-bold fs-7">هذه البيانات مسجلة رسمياً ولا يمكن تغييرها ذاتياً. إذا كان هناك أي خطأ وتريد التعديل، تواصل معنا فوراً.</span>
+                        </div>
+                    </div>
+                    <a href="https://wa.me/966573436223?text=أهلاً،%20أريد%20تعديل%20بياناتي%20في%20بوابة%20المرضى" target="_blank" class="btn-whatsapp-premium">
+                        <i class="fa-brands fa-whatsapp fs-4"></i> التواصل واتس للتعديل
+                    </a>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-12 col-md-6 col-xl-4">
+                        <div class="info-field-box">
+                            <span class="badge-lock-fixed"><i class="fa-solid fa-thumbtack me-1"></i> ثابت</span>
+                            <span class="text-muted fw-black fs-8 d-block text-uppercase mb-1">الاسم بالعربية</span>
+                            <div class="fw-black fs-5"><?= htmlspecialchars($patientData['name_ar'] ?? $patientData['name'] ?? '') ?></div>
+                            <?php if (!empty($patientData['name_en'])): ?>
+                            <div class="text-muted fw-bold fs-7 text-start mt-1 font-monospace"><?= htmlspecialchars($patientData['name_en']) ?></div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12 col-md-6 col-xl-4">
+                        <div class="info-field-box">
+                            <span class="badge-lock-fixed"><i class="fa-solid fa-thumbtack me-1"></i> ثابت</span>
+                            <span class="text-muted fw-black fs-8 d-block text-uppercase mb-1">رقم الهوية / الإقامة</span>
+                            <div class="fw-black fs-5 text-end font-monospace"><?= htmlspecialchars($patientData['identity_number'] ?? '') ?></div>
+                        </div>
+                    </div>
+
+                    <?php if (!empty($patientData['nationality_ar'])): ?>
+                    <div class="col-12 col-md-6 col-xl-4">
+                        <div class="info-field-box">
+                            <span class="badge-lock-fixed"><i class="fa-solid fa-thumbtack me-1"></i> ثابت</span>
+                            <span class="text-muted fw-black fs-8 d-block text-uppercase mb-1">الجنسية</span>
+                            <div class="fw-black fs-5"><?= htmlspecialchars($patientData['nationality_ar']) ?></div>
+                            <?php if (!empty($patientData['nationality_en'])): ?><div class="text-muted fw-bold fs-7 text-start mt-1 font-monospace"><?= htmlspecialchars($patientData['nationality_en']) ?></div><?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($patientData['employer_ar'])): ?>
+                    <div class="col-12 col-md-6 col-xl-4">
+                        <div class="info-field-box">
+                            <span class="badge-lock-fixed"><i class="fa-solid fa-thumbtack me-1"></i> ثابت</span>
+                            <span class="text-muted fw-black fs-8 d-block text-uppercase mb-1">جهة العمل</span>
+                            <div class="fw-black fs-5"><?= htmlspecialchars($patientData['employer_ar']) ?></div>
+                            <?php if (!empty($patientData['employer_en'])): ?><div class="text-muted fw-bold fs-7 text-start mt-1 font-monospace"><?= htmlspecialchars($patientData['employer_en']) ?></div><?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($patientData['phone'])): ?>
+                    <div class="col-12 col-md-6 col-xl-4">
+                        <div class="info-field-box">
+                            <span class="badge-lock-fixed"><i class="fa-solid fa-thumbtack me-1"></i> ثابت</span>
+                            <span class="text-muted fw-black fs-8 d-block text-uppercase mb-1">رقم الجوال</span>
+                            <div class="fw-black fs-5 text-end font-monospace"><?= htmlspecialchars($patientData['phone']) ?></div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="mt-5 p-4 rounded-4 bg-light-subtle border">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-black fs-6">حصة الإجازات المرضية المستهلكة</span>
+                        <span class="fw-black fs-6 text-primary"><?= $usedDays ?> / <?= $allowedDays ?> يوم</span>
+                    </div>
+                    <?php
+                      $pct = $allowedDays > 0 ? min(100, round($usedDays / $allowedDays * 100)) : 0;
+                      $barBg = $pct >= 90 ? 'bg-danger' : ($pct >= 60 ? 'bg-warning' : 'bg-success');
+                    ?>
+                    <div class="progress rounded-pill h-15 bg-secondary-subtle">
+                        <div class="progress-bar <?= $barBg ?> progress-bar-striped progress-bar-animated rounded-pill" style="width: <?= $pct ?>%"></div>
+                    </div>
+                    <div class="d-flex gap-3 mt-3 fw-bold fs-7 text-muted">
+                        <span>مستخدم: <span class="text-danger fw-black"><?= $usedDays ?></span></span>
+                        <span>|</span>
+                        <span>متبقي: <span class="text-success fw-black"><?= $remainingDays ?></span></span>
+                        <span>|</span>
+                        <span>المسموح الكلي: <span class="text-primary fw-black"><?= $allowedDays ?></span></span>
+                    </div>
+                </div>
+
+            </div>
         </div>
-      </form>
-    </div>
-  </div>
-  <?php else: ?>
-  <div class="card">
-    <div class="card-body">
-      <div class="empty-state">
-        <span class="empty-icon">🚫</span>
-        <h4>تعذر إصدار إجازات إضافية</h4>
-        <p style="margin-bottom:28px;">
-          <?php if ($allowedDays === 0): ?>
-           لقد استخدمت رصيدك من الأيام كاملاً. إذا كنت تريد الإضافة تواصل معنا في الواتس.
-          <?php else: ?>
-            لقد استنفدت كامل رصيدك المسموح به (<?= $allowedDays ?> يوم). لطلب تمديد أو استثناء يرجى التواصل معنا.
-          <?php endif; ?>
-        </p>
-        <a href="https://wa.me/966573436223" target="_blank"
-           style="display:inline-flex;align-items:center;gap:12px;background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;padding:16px 36px;border-radius:14px;font-size:16px;font-weight:800;text-decoration:none;box-shadow:0 10px 30px rgba(37,211,102,0.3);transition:var(--transition);"
-           onmouseover="this.style.transform='translateY(-3px)'"
-           onmouseout="this.style.transform='translateY(0)'">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-          </svg>
-          تواصل مع الدعم الفني (واتساب)
-        </a>
-      </div>
-    </div>
-  </div>
-  <?php endif; ?>
+        <?php endif; ?>
 
-  <div class="card">
-    <div class="card-header">
-      <h3>📋 السجل التاريخي لإجازاتي المرضية</h3>
-      <span style="font-size:14px;color:var(--text-muted);font-weight:800;"><?= count($myLeaves) ?> وثيقة معتمدة</span>
     </div>
-    <div class="card-body" style="padding:0;">
-      <?php if (empty($myLeaves)): ?>
-      <div class="empty-state">
-        <span class="empty-icon">📭</span>
-        <h4>لا توجد وثائق في السجل</h4>
-        <p>لم تقم بإصدار أي إجازة مرضية حتى الآن.</p>
-      </div>
-      <?php else: ?>
-      <div style="overflow-x:auto;">
-        <table class="leaves-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>الرمز الموحد</th>
-              <th>المنشأة الطبية</th>
-              <th>الطبيب المعالج</th>
-              <th>من تاريخ</th>
-              <th>إلى تاريخ</th>
-              <th>المدة</th>
-              <th>توقيت الإصدار</th>
-              <th>الوثيقة (PDF)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php foreach ($myLeaves as $i => $lv): ?>
-            <tr>
-              <td style="color:var(--text-muted);font-size:14px;font-weight:800;"><?= $i + 1 ?></td>
-              <td style="font-weight:900;color:var(--primary);font-size:14px;direction:ltr;text-align:right;"><?= htmlspecialchars($lv['service_code'] ?? '') ?></td>
-              <td style="font-weight:800;"><?= htmlspecialchars($lv['h_name_ar'] ?? '') ?></td>
-              <td>
-                <div style="font-weight:800;color:var(--text);"><?= htmlspecialchars($lv['d_name_ar'] ?? '') ?></div>
-                <div style="font-size:12px;color:var(--text-muted);font-weight:700;margin-top:2px;"><?= htmlspecialchars($lv['d_title_ar'] ?? '') ?></div>
-              </td>
-              <td style="direction:ltr;text-align:right;font-family:'Inter',sans-serif;font-weight:600;"><?= fmtDateUser($lv['start_date']) ?></td>
-              <td style="direction:ltr;text-align:right;font-family:'Inter',sans-serif;font-weight:600;"><?= fmtDateUser($lv['end_date']) ?></td>
-              <td>
-                <span style="background:var(--primary-glow);color:var(--primary);padding:6px 14px;border-radius:50px;font-weight:900;font-size:13px;white-space:nowrap;display:inline-block;">
-                  <?= $lv['days_count'] ?> يوم
-                </span>
-              </td>
-              <td style="font-size:14px;direction:ltr;text-align:right;font-family:'Inter',sans-serif;font-weight:600;">
-                <?= htmlspecialchars($lv['issue_time'] ?? '') ?>
-                <?= $lv['issue_period'] === 'AM' ? 'ص' : ($lv['issue_period'] === 'PM' ? 'م' : '') ?>
-              </td>
-              <td>
-                <a href="user.php?action=generate_pdf&leave_id=<?= $lv['id'] ?>&pdf_mode=download"
-                   class="btn btn-outline btn-sm" style="white-space:nowrap;">
-                  📄 تحميل PDF
-                </a>
-              </td>
-            </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
-      </div>
-      <?php endif; ?>
+    <div class="card-luxury">
+        <div class="card-header-luxury">
+            <h3 class="card-title-luxury"><i class="fa-solid fa-folder-open"></i> السجل التاريخي لإجازاتي المرضية</h3>
+            <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis fw-black px-3 py-2 fs-7 border">
+                <?= count($myLeaves) ?> وثيقة معتمدة
+            </span>
+        </div>
+        <div class="p-0">
+            <?php if (empty($myLeaves)): ?>
+            <div class="text-center p-5 text-muted">
+                <i class="fa-regular fa-folder-open fs-1 mb-3 d-block"></i>
+                <h5 class="fw-black mb-1">لا توجد وثائق في السجل</h5>
+                <p class="fw-bold fs-7 mb-0">لم تقم بإصدار أي إجازة مرضية حتى الآن.</p>
+            </div>
+            <?php else: ?>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle m-0 fs-7 fw-bold text-nowrap">
+                    <thead class="table-light text-uppercase fs-8 text-muted border-bottom">
+                        <tr>
+                            <th class="py-3 px-4 text-center">#</th>
+                            <th class="py-3 px-3">الرمز الموحد</th>
+                            <th class="py-3 px-3">المنشأة الطبية</th>
+                            <th class="py-3 px-3">الطبيب المعالج</th>
+                            <th class="py-3 px-3 text-center">من تاريخ</th>
+                            <th class="py-3 px-3 text-center">إلى تاريخ</th>
+                            <th class="py-3 px-3 text-center">المدة</th>
+                            <th class="py-3 px-3 text-center">توقيت الإصدار</th>
+                            <th class="py-3 px-4 text-center">الوثيقة (PDF)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($myLeaves as $i => $lv): ?>
+                        <tr>
+                            <td class="py-3 px-4 text-center text-muted fw-black"><?= $i + 1 ?></td>
+                            <td class="py-3 px-3 text-start font-monospace text-primary fw-black"><?= htmlspecialchars($lv['service_code'] ?? '') ?></td>
+                            <td class="py-3 px-3 fw-black"><?= htmlspecialchars($lv['h_name_ar'] ?? '') ?></td>
+                            <td class="py-3 px-3">
+                                <div class="fw-black text-body"><?= htmlspecialchars($lv['d_name_ar'] ?? '') ?></div>
+                                <div class="text-muted fs-8 fw-bold mt-1"><?= htmlspecialchars($lv['d_title_ar'] ?? '') ?></div>
+                            </td>
+                            <td class="py-3 px-3 text-center font-monospace"><?= fmtDateUser($lv['start_date']) ?></td>
+                            <td class="py-3 px-3 text-center font-monospace"><?= fmtDateUser($lv['end_date']) ?></td>
+                            <td class="py-3 px-3 text-center">
+                                <span class="badge rounded-pill bg-primary-subtle text-primary fw-black px-3 py-2 fs-7 border border-primary-subtle">
+                                    <?= $lv['days_count'] ?> يوم
+                                </span>
+                            </td>
+                            <td class="py-3 px-3 text-center font-monospace fs-7">
+                                <?= htmlspecialchars($lv['issue_time'] ?? '') ?>
+                                <?= $lv['issue_period'] === 'AM' ? 'ص' : ($lv['issue_period'] === 'PM' ? 'م' : '') ?>
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <a href="user.php?action=generate_pdf&leave_id=<?= $lv['id'] ?>&pdf_mode=download" class="btn btn-sm btn-outline-primary rounded-pill fw-black px-3 py-1">
+                                    <i class="fa-solid fa-file-pdf me-1"></i> تحميل PDF
+                                </a>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
+        </div>
     </div>
-  </div>
 
-</div><div class="toast-container" id="toastContainer"></div>
+</div>
+
+<div class="toast-overlay-container" id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
 const MAX_DAYS = <?= $remainingDays ?>;
 
-// ================= إظهار / إخفاء الإحصائيات والبيانات =================
+// ================= إظهار / إخفاء الإحصائيات والبيانات بذكاء =================
 function toggleStatsInfo() {
-  const container = document.getElementById('statsInfoContainer');
-  const btn = document.getElementById('toggleStatsBtn');
-  const isHidden = container.style.display === 'none';
-  
-  if (isHidden) {
-    container.style.display = 'block';
-    btn.innerHTML = '👁️ إخفاء الإحصائيات والبيانات الشخصية';
-    btn.classList.add('active');
-  } else {
-    container.style.display = 'none';
-    btn.innerHTML = '📊 إظهار الإحصائيات والبيانات الشخصية';
-    btn.classList.remove('active');
-  }
+    const container = document.getElementById('statsInfoContainer');
+    const btn = document.getElementById('toggleStatsBtn');
+    const isHidden = container.style.display === 'none';
+    
+    if (isHidden) {
+        container.style.display = 'block';
+        btn.innerHTML = '<i class="fa-solid fa-eye-slash fs-5"></i><span>إخفاء الإحصائيات والبيانات الشخصية للمريض</span>';
+        btn.classList.add('active');
+    } else {
+        container.style.display = 'none';
+        btn.innerHTML = '<i class="fa-solid fa-chart-pie fs-5"></i><span>إظهار الإحصائيات والبيانات الشخصية للمريض</span>';
+        btn.classList.remove('active');
+    }
 }
 
-// ================= إدارة الوضع الليلي (Dark Mode) =================
+// ================= إدارة الوضع الليلي الأصيل (Bootstrap 5 Dark Mode) =================
 function toggleTheme() {
-  const root = document.documentElement;
-  const current = root.getAttribute('data-theme');
-  const newTheme = current === 'dark' ? 'light' : 'dark';
-  
-  root.setAttribute('data-theme', newTheme);
-  localStorage.setItem('theme', newTheme);
-  updateThemeIcon(newTheme);
+    const htmlTag = document.documentElement;
+    const current = htmlTag.getAttribute('data-bs-theme');
+    const newTheme = current === 'dark' ? 'light' : 'dark';
+    
+    htmlTag.setAttribute('data-bs-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    updateThemeIcon(newTheme);
 }
 
 function updateThemeIcon(theme) {
-  const icon = document.getElementById('themeIcon');
-  if (icon) { icon.textContent = theme === 'dark' ? '🌙' : '☀️'; }
+    const icon = document.getElementById('themeIcon');
+    if (icon) { icon.className = theme === 'dark' ? 'fa-solid fa-moon fs-5' : 'fa-solid fa-sun fs-5'; }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const current = document.documentElement.getAttribute('data-theme') || 'light';
-  updateThemeIcon(current);
+    const current = document.documentElement.getAttribute('data-bs-theme') || 'light';
+    updateThemeIcon(current);
 });
 
 // ================= دوال التحكم بالنموذج والإرسال =================
 function loadDoctors(hospitalId) {
-  const sel = document.getElementById('doctorSelect');
-  sel.innerHTML = '<option value="">جاري جلب الأطباء...</option>';
-  if (!hospitalId) { sel.innerHTML = '<option value="">-- اختر المستشفى أولاً --</option>'; return; }
-  fetch('user.php?action=get_doctors_by_hospital&hospital_id=' + hospitalId)
-    .then(r => r.json())
-    .then(data => {
-      if (data.success && data.doctors.length > 0) {
-        sel.innerHTML = '<option value="">-- يرجى اختيار الطبيب --</option>';
-        data.doctors.forEach(d => {
-          sel.innerHTML += `<option value="${d.id}">${d.name_ar} — (${d.title_ar})</option>`;
-        });
-      } else {
-        sel.innerHTML = '<option value="">لا يوجد أطباء متاحين حالياً</option>';
-      }
-    })
-    .catch(() => { sel.innerHTML = '<option value="">فشل التحميل</option>'; });
+    const sel = document.getElementById('doctorSelect');
+    sel.innerHTML = '<option value="">جاري جلب الأطباء...</option>';
+    if (!hospitalId) { sel.innerHTML = '<option value="">-- اختر المستشفى أولاً --</option>'; return; }
+    
+    fetch('user.php?action=get_doctors_by_hospital&hospital_id=' + hospitalId)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.doctors.length > 0) {
+                sel.innerHTML = '<option value="">-- يرجى اختيار الطبيب --</option>';
+                data.doctors.forEach(d => {
+                    sel.innerHTML += `<option value="${d.id}">${d.name_ar} — (${d.title_ar})</option>`;
+                });
+            } else {
+                sel.innerHTML = '<option value="">لا يوجد أطباء متاحين حالياً</option>';
+            }
+        })
+        .catch(() => { sel.innerHTML = '<option value="">فشل التحميل</option>'; });
 }
 
 function calcDays() {
-  const start = document.getElementById('startDate').value;
-  const end   = document.getElementById('endDate').value;
-  const display = document.getElementById('daysDisplay');
-  const hidden  = document.getElementById('daysCount');
-  const warning = document.getElementById('daysWarning');
-  if (!start || !end) { display.value = ''; hidden.value = ''; return; }
-  const s = new Date(start), e = new Date(end);
-  if (e < s) {
-    display.value = ''; hidden.value = '';
-    warning.style.display = 'block';
-    warning.innerHTML = '⚠️ <b>خطأ:</b> تاريخ النهاية يجب أن يكون بعد تاريخ البداية.';
-    return;
-  }
-  const diff = Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1;
-  display.value = diff + ' أيام';
-  hidden.value  = diff;
-  if (diff > MAX_DAYS) {
-    warning.style.display = 'block';
-    warning.innerHTML = `⚠️ <b>تنبيه:</b> أنت تطلب أياماً أكثر من رصيدك المتاح. لطلب أيام إضافية تواصل معنا على رقمنا واتس. المدة المطلوبة (${diff} أيام) تتجاوز الرصيد المتاح (${MAX_DAYS} يوم).`;
-  } else {
-    warning.style.display = 'none';
-  }
-  document.getElementById('endDate').min = start;
+    const start = document.getElementById('startDate').value;
+    const end   = document.getElementById('endDate').value;
+    const display = document.getElementById('daysDisplay');
+    const hidden  = document.getElementById('daysCount');
+    const warning = document.getElementById('daysWarning');
+    
+    if (!start || !end) { display.value = ''; hidden.value = ''; return; }
+    const s = new Date(start), e = new Date(end);
+    if (e < s) {
+        display.value = ''; hidden.value = '';
+        warning.style.display = 'block';
+        warning.className = 'alert alert-danger fw-bold rounded-4 p-3';
+        warning.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-2"></i> <b>خطأ:</b> تاريخ النهاية يجب أن يكون بعد تاريخ البداية.';
+        return;
+    }
+    const diff = Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1;
+    display.value = diff + ' أيام';
+    hidden.value  = diff;
+    
+    if (diff > MAX_DAYS) {
+        warning.style.display = 'block';
+        warning.className = 'alert alert-warning fw-bold rounded-4 p-3';
+        warning.innerHTML = `<i class="fa-solid fa-circle-exclamation me-2"></i> <b>تنبيه:</b> أنت تطلب أياماً أكثر من رصيدك المتاح. لطلب أيام إضافية تواصل معنا على رقمنا واتس. المدة المطلوبة (${diff} أيام) تتجاوز الرصيد المتاح (${MAX_DAYS} يوم).`;
+    } else {
+        warning.style.display = 'none';
+    }
+    document.getElementById('endDate').min = start;
 }
 
 function setTimeMode(mode, btn) {
-  document.querySelectorAll('.time-tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('timeModeInput').value = mode;
-  const mf = document.getElementById('manualTimeFields');
-  const ai = document.getElementById('autoTimeInfo');
-  if (mode === 'manual') { mf.style.display = 'block'; ai.style.display = 'none'; }
-  else if (mode === 'random') { mf.style.display = 'none'; ai.style.display = 'block'; ai.textContent = '🎲 سيتم توليد توقيت عشوائي ذكي خلال ساعات الدوام الرسمي'; }
-  else { mf.style.display = 'none'; ai.style.display = 'block'; ai.textContent = '⏰ سيُعتمد التوقيت الفعلي للحظة الضغط على الزر'; }
+    document.querySelectorAll('.time-tab').forEach(t => t.classList.remove('active', 'btn-secondary', 'text-white'));
+    document.querySelectorAll('.time-tab').forEach(t => t.classList.add('btn-outline-secondary'));
+    
+    btn.classList.remove('btn-outline-secondary');
+    btn.classList.add('active', 'btn-secondary', 'text-white');
+    
+    document.getElementById('timeModeInput').value = mode;
+    const mf = document.getElementById('manualTimeFields');
+    const ai = document.getElementById('autoTimeInfo');
+    
+    if (mode === 'manual') { mf.style.display = 'block'; ai.style.display = 'none'; }
+    else if (mode === 'random') { mf.style.display = 'none'; ai.style.display = 'block'; ai.innerHTML = '<i class="fa-solid fa-dice text-primary me-1"></i> سيتم توليد توقيت عشوائي ذكي خلال ساعات الدوام الرسمي.'; }
+    else { mf.style.display = 'none'; ai.style.display = 'block'; ai.innerHTML = '<i class="fa-solid fa-circle-info text-primary me-1"></i> سيُعتمد التوقيت الفعلي للحظة الضغط على الزر برمجياً.'; }
 }
 
 function createLeave() {
-  const hospitalId = document.getElementById('hospitalSelect').value;
-  const doctorId   = document.getElementById('doctorSelect').value;
-  const startDate  = document.getElementById('startDate').value;
-  const endDate    = document.getElementById('endDate').value;
-  const daysCount  = document.getElementById('daysCount').value;
+    const hospitalId = document.getElementById('hospitalSelect').value;
+    const doctorId   = document.getElementById('doctorSelect').value;
+    const startDate  = document.getElementById('startDate').value;
+    const endDate    = document.getElementById('endDate').value;
+    const daysCount  = document.getElementById('daysCount').value;
 
-  if (!hospitalId) { showToast('يرجى اختيار المنشأة الطبية أولاً.', 'error'); return; }
-  if (!doctorId)   { showToast('يرجى تحديد الطبيب المعالج.', 'error'); return; }
-  if (!startDate)  { showToast('تاريخ بداية الإجازة مطلوب.', 'error'); return; }
-  if (!endDate)    { showToast('تاريخ نهاية الإجازة مطلوب.', 'error'); return; }
-  if (!daysCount || parseInt(daysCount) <= 0) { showToast('يرجى ضبط التواريخ بشكل صحيح.', 'error'); return; }
-  if (parseInt(daysCount) > MAX_DAYS) { showToast(`المدة المطلوبة تتجاوز رصيدك الحالي المتبقي (${MAX_DAYS} يوم).`, 'error'); return; }
+    if (!hospitalId) { showToast('يرجى اختيار المنشأة الطبية أولاً.', 'error'); return; }
+    if (!doctorId)   { showToast('يرجى تحديد الطبيب المعالج.', 'error'); return; }
+    if (!startDate)  { showToast('تاريخ بداية الإجازة مطلوب.', 'error'); return; }
+    if (!endDate)    { showToast('تاريخ نهاية الإجازة مطلوب.', 'error'); return; }
+    if (!daysCount || parseInt(daysCount) <= 0) { showToast('يرجى ضبط التواريخ بشكل صحيح.', 'error'); return; }
+    if (parseInt(daysCount) > MAX_DAYS) { showToast(`المدة المطلوبة تتجاوز رصيدك الحالي المتبقي (${MAX_DAYS} يوم).`, 'error'); return; }
 
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> جاري التوثيق والإصدار...';
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin me-2"></i> جاري التوثيق والإصدار...';
 
-  const formData = new FormData(document.getElementById('leaveForm'));
-  formData.append('action', 'create_sick_leave');
+    const formData = new FormData(document.getElementById('leaveForm'));
+    formData.append('action', 'create_sick_leave');
 
-  fetch('user.php', { method: 'POST', body: formData })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        showToast('✅ ' + data.message + ' (الرمز: ' + data.service_code + ')', 'success');
-        setTimeout(() => { location.reload(); }, 1500);
-      } else {
-        showToast(data.message || 'حدث خطأ غير متوقع.', 'error');
-        btn.disabled = false;
-        btn.innerHTML = '📄 اعتماد وإصدار الإجازة الفورية';
-      }
-    })
-    .catch(() => {
-      showToast('مشكلة في الاتصال بالخادم. يرجى المحاولة لاحقاً.', 'error');
-      btn.disabled = false;
-      btn.innerHTML = '📄 اعتماد وإصدار الإجازة الفورية';
-    });
+    fetch('user.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showToast('✅ ' + data.message + ' (الرمز: ' + data.service_code + ')', 'success');
+                setTimeout(() => { location.reload(); }, 1500);
+            } else {
+                showToast(data.message || 'حدث خطأ غير متوقع.', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up me-2"></i> اعتماد وإصدار الإجازة الفورية';
+            }
+        })
+        .catch(() => {
+            showToast('مشكلة في الاتصال بالخادم. يرجى المحاولة لاحقاً.', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up me-2"></i> اعتماد وإصدار الإجازة الفورية';
+        });
 }
 
 function showToast(msg, type = 'success') {
-  const container = document.getElementById('toastContainer');
-  const icons = { success: '✨', error: '❌', warning: '⚠️' };
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.innerHTML = `<span style="font-size:20px;">${icons[type] || '💬'}</span><span style="flex:1;">${msg}</span>`;
-  container.appendChild(toast);
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateY(-10px)';
-    toast.style.transition = 'all 0.4s ease';
-    setTimeout(() => toast.remove(), 400);
-  }, 5000);
+    const container = document.getElementById('toastContainer');
+    const icons = { success: '<i class="fa-solid fa-circle-check text-success fs-3"></i>', error: '<i class="fa-solid fa-circle-xmark text-danger fs-3"></i>', warning: '<i class="fa-solid fa-triangle-exclamation text-warning fs-3"></i>' };
+    const toast = document.createElement('div');
+    toast.className = 'toast-lux';
+    if(type === 'error') toast.style.borderRightColor = '#ef4444';
+    if(type === 'warning') toast.style.borderRightColor = '#f59e0b';
+    
+    toast.innerHTML = `${icons[type] || '<i class="fa-solid fa-comment fs-3"></i>'}<span style="flex:1;">${msg}</span>`;
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        toast.style.transition = 'all 0.4s ease';
+        setTimeout(() => toast.remove(), 400);
+    }, 5000);
 }
 
 // ================= نظام الإشعارات =================
 let notifPanelOpen = false;
 
 function toggleNotifPanel() {
-  const panel = document.getElementById('notifPanel');
-  notifPanelOpen = !notifPanelOpen;
-  panel.style.display = notifPanelOpen ? 'block' : 'none';
-  if (notifPanelOpen) loadNotifications();
+    const panel = document.getElementById('notifPanel');
+    notifPanelOpen = !notifPanelOpen;
+    panel.style.display = notifPanelOpen ? 'block' : 'none';
+    if (notifPanelOpen) loadNotifications();
 }
 
 document.addEventListener('click', function(e) {
-  const bell = document.getElementById('notifBell');
-  const panel = document.getElementById('notifPanel');
-  if (panel && bell && !bell.contains(e.target) && !panel.contains(e.target)) {
-    panel.style.display = 'none';
-    notifPanelOpen = false;
-  }
+    const bell = document.getElementById('notifBell');
+    const panel = document.getElementById('notifPanel');
+    if (panel && bell && !bell.contains(e.target) && !panel.contains(e.target)) {
+        panel.style.display = 'none';
+        notifPanelOpen = false;
+    }
 });
 
 async function loadNotifications() {
-  try {
-    const res = await fetch('user.php?action=get_user_notifications');
-    const data = await res.json();
-    if (data.success) {
-      const list = document.getElementById('notifList');
-      const badge = document.getElementById('notifBadge');
-      if (data.unread_count > 0) {
-        badge.style.display = 'flex';
-        badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
-      } else {
-        badge.style.display = 'none';
-      }
-      if (!data.notifications || data.notifications.length === 0) {
-        list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);font-size:14px;font-weight:700;">لا توجد إشعارات حالياً</div>';
-        return;
-      }
-      list.innerHTML = data.notifications.map(n => `
-        <div class="notif-item ${n.is_read == 0 ? 'unread' : ''}">
-          <div style="font-size:14px;font-weight:${n.is_read == 0 ? '900' : '700'};color:var(--text);line-height:1.6;">${escapeHtml(n.message)}</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:8px;font-family:'Inter',sans-serif;font-weight:600;">${n.created_at}</div>
-        </div>
-      `).join('');
-    }
-  } catch(e) {}
+    try {
+        const res = await fetch('user.php?action=get_user_notifications');
+        const data = await res.json();
+        if (data.success) {
+            const list = document.getElementById('notifList');
+            const badge = document.getElementById('notifBadge');
+            if (data.unread_count > 0) {
+                badge.style.display = 'inline-block';
+                badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
+            } else {
+                badge.style.display = 'none';
+            }
+            if (!data.notifications || data.notifications.length === 0) {
+                list.innerHTML = '<div class="text-center p-4 text-muted fw-bold fs-7">لا توجد إشعارات حالياً</div>';
+                return;
+            }
+            list.innerHTML = data.notifications.map(n => `
+                <div class="p-3 border-bottom ${n.is_read == 0 ? 'bg-primary-subtle border-primary' : ''}">
+                    <div class="fs-7 fw-bold text-body line-height-1.5">${escapeHtml(n.message)}</div>
+                    <div class="text-muted fs-8 font-monospace mt-2">${n.created_at}</div>
+                </div>
+            `).join('');
+        }
+    } catch(e) {}
 }
 
 async function markAllRead() {
-  try {
-    const fd = new FormData();
-    fd.append('action', 'mark_user_notifications_read');
-    await fetch('user.php', { method: 'POST', body: fd });
-    document.getElementById('notifBadge').style.display = 'none';
-    loadNotifications();
-  } catch(e) {}
+    try {
+        const fd = new FormData();
+        fd.append('action', 'mark_user_notifications_read');
+        await fetch('user.php', { method: 'POST', body: fd });
+        document.getElementById('notifBadge').style.display = 'none';
+        loadNotifications();
+    } catch(e) {}
 }
 
 function escapeHtml(str) {
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
 }
 
 (async function() {
-  try {
-    const res = await fetch('user.php?action=get_user_notifications');
-    const data = await res.json();
-    if (data.success && data.unread_count > 0) {
-      const badge = document.getElementById('notifBadge');
-      if (badge) {
-        badge.style.display = 'flex';
-        badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
-      }
-    }
-  } catch(e) {}
+    try {
+        const res = await fetch('user.php?action=get_user_notifications');
+        const data = await res.json();
+        if (data.success && data.unread_count > 0) {
+            const badge = document.getElementById('notifBadge');
+            if (badge) {
+                badge.style.display = 'inline-block';
+                badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
+            }
+        }
+    } catch(e) {}
 })();
 </script>
 
