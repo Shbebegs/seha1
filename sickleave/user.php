@@ -515,18 +515,42 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
     $durationEn = $daysEn . ' ( ' . $startEn . ' to ' . $endEn . ' )';
     $durationAr = '<span style="font-family: \'Times New Roman\', serif; font-size: 14.5px; font-weight: 400;">' . $daysAr . '</span> <span style="font-family: \'Noto Sans Arabic\', sans-serif; font-size: 14.5px; font-weight: 400;">' . $daysArWord . '</span> ( ' . formatHijriDateSpanUser($startHj) . ' <span style="font-family: \'Noto Sans Arabic\', sans-serif; font-size: 13.5px; font-weight: 400;">إلى</span> ' . formatHijriDateSpanUser($endHj) . ' )';
 
-    if ($pdfMode === 'download') {
+   if ($pdfMode === 'download') {
         $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']) . '/';
         $scFile = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sc);
 
         $pdfHtml  = '<!DOCTYPE html><html lang="ar"><head><meta charset="utf-8"/>';
         $pdfHtml .= '<title>Sick Leave Report</title>';
+        
+        // خطوط جوجل للمسافات والنصوص العربية فقط
         $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap" />';
         $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap" />';
         $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap" />';
+        
         $pdfHtml .= '<style>html{line-height:1.15}body{margin:0}*{box-sizing:border-box;border-width:0;border-style:solid}p,li,ul,pre,div,h1,h2,h3,h4,h5,h6,figure,blockquote,figcaption{margin:0;padding:0}a{color:inherit;text-decoration:inherit}</style>';
         $pdfHtml .= '<style>html{font-family:Inter,sans-serif;font-size:16px}body{font-weight:400;color:#191818;background:#ffffff;margin:0;padding:0}</style>';
-        $pdfHtml .= '<style>@page{size:842.25px 1190.25px;margin:0}.group1-container1{width:842.25px;height:1190.25px;position:relative;background-color:transparent;margin:0;padding:0}.group1-thq-group1-elm{width:842.25px;height:1190.25px;position:relative;background-color:white;margin:0;padding:0}.info-table{position:absolute;top:242px;left:36px;width:770px;border-collapse:separate;border-spacing:0;border:1px solid #cccccc;border-radius:8px;overflow:hidden;background-color:transparent;z-index:10}.info-table td{border-bottom:1px solid #cccccc;border-right:1px solid #cccccc;height:42px;text-align:center;vertical-align:middle;padding:4px 8px}.info-table td:last-child{border-right:none}.info-table tr:last-child td{border-bottom:none}.info-table .en-title{width:161px;color:rgba(54,111,181,1);font-size:13.5px;font-weight:700;text-align:center;font-family:"Times New Roman",serif}.info-table .data-cell{width:240px;color:rgba(44,62,119,1);font-size:13.5px;font-family:"Times New Roman",serif;font-weight:400;text-align:center}.info-table .date-cell{font-size:13.9px}.info-table .data-cell.ar-text{font-family:"Noto Sans Arabic",sans-serif}.info-table .ar-title{width:140px;color:rgba(54,111,181,1);font-size:13.5px;font-weight:700;text-align:center;font-family:"Noto Sans Arabic",sans-serif;white-space:nowrap}.info-table tr.blue-row td{background-color:#2c3e77;color:#ffffff;border-bottom:1px solid #cccccc;border-right:1px solid #cccccc}.info-table tr.blue-row td:last-child{border-right:none}.info-table .blue-row .data-cell.ar-text{color:rgba(255,255,255,1);font-size:13.5px;font-family:"Times New Roman",serif;font-weight:400}.info-table .blue-row .data-cell{color:rgba(255,255,255,1)}.info-table tr.gray-row td{background-color:#f7f7f7}.en-spaced{letter-spacing:0.3px}:root{--footer-offset:40px}.group1-thq-staticinfo-elm{top:125px;left:36.65px;width:768.35px;height:811.91px;display:flex;position:absolute;align-items:flex-start}.top-right-placeholder{position:absolute;top:36px;left:592px;width:214px;height:107px;display:flex;align-items:center;justify-content:center}.top-left-placeholder{position:absolute;top:36px;left:36px;width:149.96px;height:65.98px;display:flex;align-items:center;justify-content:center}.bottom-right-placeholder{position:absolute;top:1005px;left:657.17px;width:149.96px;height:71.23px;display:flex;align-items:center;justify-content:center}.header-placeholder{top:-55px;left:320px;width:160px;height:50px;position:absolute;display:flex;align-items:center;justify-content:center}.group1-thq-text-elm41{top:40px;left:289px;color:rgba(48,109,181,1);width:215px;position:absolute;font-size:22.5px;font-weight:700;text-align:center;line-height:30px}.group1-thq-text-elm44{top:-10px;left:310px;color:rgba(0,0,0,1);position:absolute;font-size:17.3px;font-weight:400;text-align:left;font-family:"Times New Roman",serif}.group1-thq-hospitallogoandthename-elm{top:760px;left:438.94px;width:403px;height:202.78px;display:flex;position:absolute;align-items:flex-start}.placeholder-logo-hospital{top:-12px;left:133px;width:136px;height:136px;position:absolute;display:flex;align-items:center;justify-content:center}.group1-thq-text-elm18{top:120px;color:rgba(0,0,0,1);width:403px;height:auto;position:absolute;font-size:12.8px;text-align:center;line-height:22px}.group1-thq-thedateofissueandalsotimeofissue-elm{top:calc(989.85px + var(--footer-offset));left:37.37px;width:250px;height:56px;display:flex;position:absolute;align-items:flex-start}.group1-thq-text-elm22{color:rgba(0,0,0,1);font-size:12.5px;font-weight:700;text-align:left;line-height:28px;font-family:"Times New Roman",serif;position:absolute;white-space:nowrap}.group1-thq-text-elm36{top:calc(724.55px + var(--footer-offset));left:29.23px;color:rgba(0,0,0,1);position:absolute;font-size:12px;font-weight:700;text-align:center;font-family:"Noto Sans Arabic",sans-serif;line-height:23px}.group1-thq-text-elm39{top:calc(775.17px + var(--footer-offset));left:55px;color:rgba(0,0,0,1);position:absolute;font-size:12px;font-weight:700;text-align:left;font-family:"Times New Roman",serif}.group1-thq-text-elm40{top:calc(798.91px + var(--footer-offset));left:108.35px;color:rgba(20,0,255,1);position:absolute;font-size:11px;font-weight:700;text-align:left;text-decoration:underline;font-family:"Times New Roman",serif}.placeholder-136{position:absolute;top:620px;left:122px;width:136px;height:136px;display:flex;align-items:center;justify-content:center}.vertical-divider{position:absolute;top:735px;left:436px;width:1px;height:7cm;background-color:#dddddd}.thin-slash{font-weight:300;font-family:"Inter",sans-serif;margin:0 3px;display:inline-block}</style>';
+        
+        $pdfHtml .= '<style>';
+        
+        // =========================================================
+        // تضمين خطوط Times New Roman بصيغة (.otf) لنسخة الـ PDF
+        // =========================================================
+        $pdfHtml .= '@font-face {';
+        $pdfHtml .= '    font-family: "Times New Roman";';
+        $pdfHtml .= '    src: url("' . $baseUrl . 'times_regular.otf") format("opentype");';
+        $pdfHtml .= '    font-weight: 400;';
+        $pdfHtml .= '    font-style: normal;';
+        $pdfHtml .= '}';
+
+        $pdfHtml .= '@font-face {';
+        $pdfHtml .= '    font-family: "Times New Roman";';
+        $pdfHtml .= '    src: url("' . $baseUrl . 'times_bold.otf") format("opentype");';
+        $pdfHtml .= '    font-weight: 700;';
+        $pdfHtml .= '    font-style: normal;';
+        $pdfHtml .= '}';
+        // =========================================================
+
+        $pdfHtml .= '@page{size:842.25px 1190.25px;margin:0}.group1-container1{width:842.25px;height:1190.25px;position:relative;background-color:transparent;margin:0;padding:0}.group1-thq-group1-elm{width:842.25px;height:1190.25px;position:relative;background-color:white;margin:0;padding:0}.info-table{position:absolute;top:242px;left:36px;width:770px;border-collapse:separate;border-spacing:0;border:1px solid #cccccc;border-radius:8px;overflow:hidden;background-color:transparent;z-index:10}.info-table td{border-bottom:1px solid #cccccc;border-right:1px solid #cccccc;height:42px;text-align:center;vertical-align:middle;padding:4px 8px}.info-table td:last-child{border-right:none}.info-table tr:last-child td{border-bottom:none}.info-table .en-title{width:161px;color:rgba(54,111,181,1);font-size:13.5px;font-weight:700;text-align:center;font-family:"Times New Roman",serif}.info-table .data-cell{width:240px;color:rgba(44,62,119,1);font-size:13.5px;font-family:"Times New Roman",serif;font-weight:400;text-align:center}.info-table .date-cell{font-size:13.9px}.info-table .data-cell.ar-text{font-family:"Noto Sans Arabic",sans-serif}.info-table .ar-title{width:140px;color:rgba(54,111,181,1);font-size:13.5px;font-weight:700;text-align:center;font-family:"Noto Sans Arabic",sans-serif;white-space:nowrap}.info-table tr.blue-row td{background-color:#2c3e77;color:#ffffff;border-bottom:1px solid #cccccc;border-right:1px solid #cccccc}.info-table tr.blue-row td:last-child{border-right:none}.info-table .blue-row .data-cell.ar-text{color:rgba(255,255,255,1);font-size:13.5px;font-family:"Times New Roman",serif;font-weight:400}.info-table .blue-row .data-cell{color:rgba(255,255,255,1)}.info-table tr.gray-row td{background-color:#f7f7f7}.en-spaced{letter-spacing:0.3px}:root{--footer-offset:40px}.group1-thq-staticinfo-elm{top:125px;left:36.65px;width:768.35px;height:811.91px;display:flex;position:absolute;align-items:flex-start}.top-right-placeholder{position:absolute;top:36px;left:592px;width:214px;height:107px;display:flex;align-items:center;justify-content:center}.top-left-placeholder{position:absolute;top:36px;left:36px;width:149.96px;height:65.98px;display:flex;align-items:center;justify-content:center}.bottom-right-placeholder{position:absolute;top:1005px;left:657.17px;width:149.96px;height:71.23px;display:flex;align-items:center;justify-content:center}.header-placeholder{top:-55px;left:320px;width:160px;height:50px;position:absolute;display:flex;align-items:center;justify-content:center}.group1-thq-text-elm41{top:40px;left:289px;color:rgba(48,109,181,1);width:215px;position:absolute;font-size:22.5px;font-weight:700;text-align:center;line-height:30px}.group1-thq-text-elm44{top:-10px;left:310px;color:rgba(0,0,0,1);position:absolute;font-size:17.3px;font-weight:400;text-align:left;font-family:"Times New Roman",serif}.group1-thq-hospitallogoandthename-elm{top:760px;left:438.94px;width:403px;height:202.78px;display:flex;position:absolute;align-items:flex-start}.placeholder-logo-hospital{top:-12px;left:133px;width:136px;height:136px;position:absolute;display:flex;align-items:center;justify-content:center}.group1-thq-text-elm18{top:120px;color:rgba(0,0,0,1);width:403px;height:auto;position:absolute;font-size:12.8px;text-align:center;line-height:22px}.group1-thq-thedateofissueandalsotimeofissue-elm{top:calc(989.85px + var(--footer-offset));left:37.37px;width:250px;height:56px;display:flex;position:absolute;align-items:flex-start}.group1-thq-text-elm22{color:rgba(0,0,0,1);font-size:12.5px;font-weight:700;text-align:left;line-height:28px;font-family:"Times New Roman",serif;position:absolute;white-space:nowrap}.group1-thq-text-elm36{top:calc(724.55px + var(--footer-offset));left:29.23px;color:rgba(0,0,0,1);position:absolute;font-size:12px;font-weight:700;text-align:center;font-family:"Noto Sans Arabic",sans-serif;line-height:23px}.group1-thq-text-elm39{top:calc(775.17px + var(--footer-offset));left:55px;color:rgba(0,0,0,1);position:absolute;font-size:12px;font-weight:700;text-align:left;font-family:"Times New Roman",serif}.group1-thq-text-elm40{top:calc(798.91px + var(--footer-offset));left:108.35px;color:rgba(20,0,255,1);position:absolute;font-size:11px;font-weight:700;text-align:left;text-decoration:underline;font-family:"Times New Roman",serif}.placeholder-136{position:absolute;top:620px;left:122px;width:136px;height:136px;display:flex;align-items:center;justify-content:center}.vertical-divider{position:absolute;top:735px;left:436px;width:1px;height:7cm;background-color:#dddddd}.thin-slash{font-weight:300;font-family:"Inter",sans-serif;margin:0 3px;display:inline-block}</style>';
         $pdfHtml .= '</head><body>';
 
         $reportBodyPdf  = '<div class="group1-container1"><div class="group1-thq-group1-elm">';
@@ -578,7 +602,6 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
             if (is_file($p) && !is_link($p)) { $pythonBin = $p; break; }
             if (is_link($p)) { $real = realpath($p); if ($real && is_file($real)) { $pythonBin = $real; break; } }
         }
-        $scFile = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sc);
         $cmd = $pythonBin . ' "' . $scriptPath . '" "' . $tmpHtml . '" "' . $tmpPdf . '" 2>&1';
         $output = shell_exec($cmd);
 
@@ -595,37 +618,59 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
         @unlink($tmpHtml);
     }
 
+    // تجهيز الرابط الأساسي لاستخدامه في صفحة العرض (Preview) لضمان المسارات المطلقة
+    $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']) . '/';
+
     header('Content-Type: text/html; charset=utf-8');
-    ?>
+?>
 <!DOCTYPE html>
 <html lang="ar">
 <head>
 <title>تقرير إجازة مرضية - Sick Leave Report</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap" />
 <style>
+/* ========================================================= */
+/* تضمين خطوط Times New Roman بصيغة (.otf) لنسخة المتصفح   */
+/* ========================================================= */
+@font-face {
+    font-family: "Times New Roman";
+    src: url("<?= $baseUrl ?>times_regular.otf") format("opentype");
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Times New Roman";
+    src: url("<?= $baseUrl ?>times_bold.otf") format("opentype");
+    font-weight: 700;
+    font-style: normal;
+}
+/* ========================================================= */
+
 html { line-height: 1.15; font-family: Inter, sans-serif; font-size: 16px; }
 body { margin: 0; font-weight: 400; color: #191818; background: #FBFAF9; overflow-x: hidden; }
 * { box-sizing: border-box; border-width: 0; border-style: solid; -webkit-font-smoothing: antialiased; }
 p, li, ul, pre, div, h1, h2, h3, h4, h5, h6 { margin: 0; padding: 0; }
 a { color: inherit; text-decoration: inherit; }
-</style>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap" />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap" />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap" />
-<style>
+
 .group1-container1 { width: 100%; display: flex; overflow-x: hidden; min-height: 100vh; align-items: center; flex-direction: column; background-color: #f0f0f0; padding-top: 20px; padding-bottom: 20px; }
 .group1-thq-group1-elm { width: 842.25px; height: 1190.25px; display: flex; position: relative; align-items: flex-start; flex-shrink: 0; box-shadow: 0px 4px 15px rgba(0,0,0,0.1); background-color: white; }
 .info-table { position: absolute; top: 242px; left: 36px; width: 770px; border-collapse: separate; border-spacing: 0; border: 1px solid #cccccc; border-radius: 8px; overflow: hidden; z-index: 10; }
 .info-table td { border-bottom: 1px solid #cccccc; border-right: 1px solid #cccccc; height: 42px; text-align: center; vertical-align: middle; padding: 4px 8px; }
 .info-table td:last-child { border-right: none; } .info-table tr:last-child td { border-bottom: none; }
+
+/* توحيد استدعاء Times New Roman في الـ CSS */
 .info-table .en-title { width: 161px; color: rgba(54, 111, 181, 1); font-size: 13.5px; font-weight: 700; font-family: "Times New Roman", serif; }
-.info-table .data-cell { width: 240px; color: rgba(44, 62, 119, 1); font-size: 13.5px; font-family: "Times New Roman", serif; }
+.info-table .data-cell { width: 240px; color: rgba(44, 62, 119, 1); font-size: 13.5px; font-family: "Times New Roman", serif; font-weight: 400; }
 .info-table .date-cell { font-size: 13.9px; } .info-table .data-cell.ar-text { font-family: "Noto Sans Arabic", sans-serif; }
 .info-table .ar-title { width: 140px; color: rgba(54, 111, 181, 1); font-size: 13.5px; font-weight: 700; font-family: "Noto Sans Arabic", sans-serif; white-space: nowrap; }
 .info-table tr.blue-row td { background-color: #2c3e77; color: #ffffff; border-bottom: 1px solid #cccccc; border-right: 1px solid #cccccc; }
 .info-table tr.blue-row td:last-child { border-right: none; }
-.info-table .blue-row .data-cell.ar-text, .info-table .blue-row .data-cell { color: #ffffff; }
+.info-table .blue-row .data-cell.ar-text, .info-table .blue-row .data-cell { color: #ffffff; font-family: "Times New Roman", serif; }
 .info-table tr.gray-row td { background-color: #f7f7f7; }
 .en-spaced { letter-spacing: 0.3px; }
 :root { --footer-offset: 40px; }
@@ -647,15 +692,18 @@ a { color: inherit; text-decoration: inherit; }
 .placeholder-136 { position: absolute; top: 620px; left: 122px; width: 136px; height: 136px; display: flex; align-items: center; justify-content: center; pointer-events: auto; }
 .vertical-divider { position: absolute; top: 735px; left: 436px; width: 1px; height: 7cm; background-color: #dddddd; }
 .thin-slash { font-weight: 300; font-family: "Inter", sans-serif; margin: 0 3px; display: inline-block; }
+
 .controls { position: fixed; bottom: 30px; right: 30px; display: flex; gap: 15px; z-index: 1000; }
 .download-btn { background-color: #306db5; color: white; padding: 14px 28px; border-radius: 10px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0px 6px 15px rgba(0,0,0,0.3); font-family: "Inter", sans-serif; transition: all 0.3s; }
 .download-btn:hover { background-color: #2c3e77; transform: translateY(-3px); }
+
 @media screen and (max-width: 880px) {
   .group1-container1 { padding-top: 10px; padding-bottom: 10px; }
   .group1-thq-group1-elm { transform-origin: top center; transform: scale(calc(100vw / 860)); margin-bottom: calc(1190.25px * (100vw / 860) - 1190.25px); }
   .controls { bottom: 15px; right: 15px; left: 15px; justify-content: center; }
   .download-btn { width: 100%; text-align: center; font-size: 18px; padding: 16px; }
 }
+
 @media print {
   @page { size: 842.25px 1190.25px; margin: 0; }
   body { background: white !important; }
@@ -686,17 +734,17 @@ function downloadPDF() {
 </div>
 <div class="group1-container1">
   <div class="group1-thq-group1-elm" id="report-content">
-    <div class="top-right-placeholder"><img src="sehalogoright.svg" alt="" style="width:100%;height:100%;" onerror="this.style.display='none'" /></div>
-    <div class="top-left-placeholder"><img src="sehalogoleft.svg" alt="" style="width:100%;height:100%;" onerror="this.style.display='none'" /></div>
-    <div class="bottom-right-placeholder"><img src="bottomright.svg" alt="" style="width:100%;height:100%;" onerror="this.style.display='none'" /></div>
+    <div class="top-right-placeholder"><img src="<?= $baseUrl ?>sehalogoright.svg" alt="" style="width:100%;height:100%;" onerror="this.style.display='none'" /></div>
+    <div class="top-left-placeholder"><img src="<?= $baseUrl ?>sehalogoleft.svg" alt="" style="width:100%;height:100%;" onerror="this.style.display='none'" /></div>
+    <div class="bottom-right-placeholder"><img src="<?= $baseUrl ?>bottomright.svg" alt="" style="width:100%;height:100%;" onerror="this.style.display='none'" /></div>
     <div class="group1-thq-staticinfo-elm">
-      <div class="header-placeholder"><img src="header.svg" alt="" style="width:100%;height:100%;" onerror="this.style.display='none'" /></div>
+      <div class="header-placeholder"><img src="<?= $baseUrl ?>header.svg" alt="" style="width:100%;height:100%;" onerror="this.style.display='none'" /></div>
       <span class="group1-thq-text-elm41">
         <span style="font-size:22.5px;font-family:'Noto Sans Arabic',sans-serif;font-weight:700;color:#306db5;">تقرير إجازة مرضية</span><br/>
         <span style="font-size:18.7px;font-family:'Times New Roman',serif;font-weight:700;color:#2c3e77;">Sick Leave Report</span>
       </span>
       <span class="group1-thq-text-elm44">Kingdom of Saudi Arabia</span>
-      <div class="placeholder-136"><img src="qr.svg" alt="QR" style="width:130px;height:130px;" onerror="this.style.display='none'" /></div>
+      <div class="placeholder-136"><img src="<?= $baseUrl ?>qr.svg" alt="QR" style="width:130px;height:130px;" onerror="this.style.display='none'" /></div>
       <span class="group1-thq-text-elm36" dir="rtl">للتحقق من بيانات التقرير يرجى التأكد من زيارة موقع منصة صحة<br/>الرسمي</span>
       <span class="group1-thq-text-elm39">To check the report please visit Seha's official website</span>
       <span class="group1-thq-text-elm40"><a href="https://seha-sa-iniquiries-slenquiry.up.railway.app/" target="_blank">www.seha.sa/#/inquiries/slenquiry</a></span>
@@ -735,7 +783,7 @@ function downloadPDF() {
 </html>
 <?php
     exit;
-}
+?>
 
 // ======================== تحميل البيانات للصفحة الرئيسية ========================
 $patientData   = null;
