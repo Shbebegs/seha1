@@ -1217,7 +1217,7 @@ body { font-family:'Cairo',sans-serif; background:var(--bg); color:var(--text); 
   <div class="card">
     <div class="card-header">
       <h3>👤 بياناتي الشخصية والوظيفية</h3>
-      <span style="font-size:12px;color:var(--text-muted);font-weight:700;background:var(--input-bg);padding:4px 12px;border-radius:8px;">للعرض فقط لاجراء اي تعديلات على بياناتك تواصل معنا على الواتس</span>
+      <span style="font-size:12px;color:var(--text-muted);font-weight:700;background:var(--input-bg);padding:4px 12px;border-radius:8px;">هذه بياناتك للعرض فقط لاجراء اي تعديلات عليها تواصل معنا على الواتس</span>
     </div>
     <div class="card-body">
       <div class="patient-info-grid">
