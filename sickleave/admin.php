@@ -6066,7 +6066,7 @@ if (!in_array($uiDataViewMode, ['table','compact','cards','zebra','glass','minim
         </div>
 
         <!-- ======================== تبويب المستشفيات ======================== -->
-        <div class="tab-pane fade" id="pane-hospitals" role="tabpanel">
+       <div class="tab-pane fade" id="pane-hospitals" role="tabpanel">
             <div class="card-custom">
                 <div class="card-header"><i class="bi bi-hospital text-primary"></i> إدارة المستشفيات</div>
                 <div class="card-body">
@@ -6101,6 +6101,14 @@ if (!in_array($uiDataViewMode, ['table','compact','cards','zebra','glass','minim
                             </div>
                         </form>
                     </div>
+                    
+                    <div class="toolbar mb-3">
+                        <div class="input-group" style="max-width:280px;">
+                            <input type="text" class="form-control" id="searchHospitals" placeholder="بحث في المستشفيات...">
+                            <button class="btn btn-gradient" id="btn-search-hospitals" type="button"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                    
                     <div class="table-responsive">
                         <table class="table table-bordered table-hover table-striped text-center mobile-readable" id="hospitalsTable">
                             <thead><tr><th>#</th><th>الشعار</th><th>الاسم (عربي)</th><th>الاسم (English)</th><th>الترخيص</th><th>البادئة</th><th>التحكم</th></tr></thead>
@@ -6143,16 +6151,18 @@ if (!in_array($uiDataViewMode, ['table','compact','cards','zebra','glass','minim
                             <strong><i class="bi bi-people-fill text-primary"></i> إضافة دفعة أطباء</strong>
                             <small class="text-muted">كل سطر = اسم عربي | اسم إنجليزي | مسمى عربي | مسمى إنجليزي</small>
                         </div>
-                        <form id="addDoctorsBatchForm" class="row g-2">
-                            <div class="col-md-4">
-                                <label class="form-label">المستشفى</label>
-                                <select class="form-select" name="batch_hospital_id" id="batch_hospital_id">
-                                    <option value="">اختر مستشفى</option>
-                                    <?php foreach ($hospitals_data as $h): ?>
-                                    <option value="<?php echo $h['id']; ?>"><?php echo htmlspecialchars($h['name_ar']); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
+                     <div class="col-md-4">
+    <label class="form-label">المستشفى</label>
+    
+    <input type="text" class="form-control form-control-sm mb-2" id="batch_hospital_search" placeholder="بحث سريع باسم المستشفى...">
+    
+    <select class="form-select" name="batch_hospital_id" id="batch_hospital_id">
+        <option value="">اختر مستشفى</option>
+        <?php foreach ($hospitals_data as $h): ?>
+        <option value="<?php echo $h['id']; ?>"><?php echo htmlspecialchars($h['name_ar']); ?></option>
+        <?php endforeach; ?>
+    </select>
+</div>
                             <div class="col-md-8">
                                 <label class="form-label">الأطباء (كل سطر طبيب واحد)</label>
                                 <textarea class="form-control" id="doctors_batch_text" name="doctors_batch_text" rows="4" placeholder="د. أحمد علي | Dr. Ahmed Ali | استشاري باطنية | Consultant Internal Medicine&#10;د. نورة خالد | Dr. Noura Khaled | أخصائي أطفال | Pediatric Specialist"></textarea>
@@ -8509,6 +8519,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setupSelectQuickSearch('hospital_id_search', 'hospital_id');
     // أضف هذا السطر لربط حقل البحث الجديد بالقائمة
 setupSelectQuickSearch('acctNewLinkPatientSearch', 'acctNewLinkPatient');
+    // أضف هذا السطر لربط حقل البحث الجديد بقائمة المستشفيات في نموذج الدفعة
+setupSelectQuickSearch('batch_hospital_search', 'batch_hospital_id');
 
     const quickPatientModalEl = document.getElementById('quickPatientModal');
     const quickDoctorModalEl = document.getElementById('quickDoctorModal');
@@ -10465,7 +10477,7 @@ setupSelectQuickSearch('acctNewLinkPatientSearch', 'acctNewLinkPatient');
         updatePaymentNotifications(data);
     }
 
-    document.getElementById('searchLeaves').addEventListener('input', debounce(function() {
+  document.getElementById('searchLeaves').addEventListener('input', debounce(function() {
         filtersState.leaves.search = this.value;
         applyLeavesFilters();
     }));
@@ -10494,6 +10506,15 @@ setupSelectQuickSearch('acctNewLinkPatientSearch', 'acctNewLinkPatient');
         filtersState.payments.search = this.value;
         applyPaymentsFilters();
     }));
+
+    // ====== إضافة البحث الفوري للمستشفيات هنا ======
+    document.getElementById('searchHospitals')?.addEventListener('input', debounce(function() {
+        renderHospitals();
+    }));
+
+    document.getElementById('btn-search-hospitals')?.addEventListener('click', () => {
+        renderHospitals();
+    });
 
     document.getElementById('showPaidLeaves').addEventListener('click', () => { filtersState.leaves.typeFilter = 'paid'; applyLeavesFilters(); });
     document.getElementById('showUnpaidLeaves').addEventListener('click', () => { filtersState.leaves.typeFilter = 'unpaid'; applyLeavesFilters(); });
@@ -11044,9 +11065,14 @@ setupSelectQuickSearch('acctNewLinkPatientSearch', 'acctNewLinkPatient');
         const logoImg = hasLogo ? '<span class="badge bg-success"><i class="bi bi-image"></i> موجود</span>' : (h.logo_url ? `<img src="${htmlspecialchars(h.logo_url)}" style="max-height:40px;max-width:80px;" onerror="this.parentElement.innerHTML='افتراضي'">` : 'افتراضي');
         return `<tr data-id="${h.id}"><td class="row-num"></td><td>${logoImg}</td><td>${htmlspecialchars(h.name_ar || '')}</td><td>${htmlspecialchars(h.name_en || '')}</td><td>${h.license_number || '-'}</td><td><span class="badge ${h.service_prefix === 'PSL' ? 'bg-warning' : 'bg-success'}">${h.service_prefix || 'GSL'}</span></td><td><button class="btn btn-sm btn-gradient action-btn btn-edit-hospital" data-id="${h.id}" data-name-ar="${htmlspecialchars(h.name_ar || '')}" data-name-en="${htmlspecialchars(h.name_en || '')}" data-license="${htmlspecialchars(h.license_number || '')}" data-prefix="${h.service_prefix || 'GSL'}" data-logo="${hasLogo ? 'has_logo' : htmlspecialchars(h.logo_url || '')}" data-logo-scale="${h.logo_scale || 1}" data-logo-offset-x="${h.logo_offset_x || 0}" data-logo-offset-y="${h.logo_offset_y || 0}"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-danger-custom action-btn btn-delete-hospital" data-id="${h.id}"><i class="bi bi-trash3"></i></button></td></tr>`;
     }
-    function renderHospitals() {
+  function renderHospitals() {
         if (hospitalsTable && currentTableData.hospitals) {
-            updateTable(hospitalsTable, currentTableData.hospitals, generateHospitalRow);
+            let filtered = [...currentTableData.hospitals];
+            const q = normalizeSearchText(document.getElementById('searchHospitals')?.value || '');
+            if (q) {
+                filtered = filtered.filter(h => matchesSearch(h, q));
+            }
+            updateTable(hospitalsTable, filtered, generateHospitalRow);
         }
     }
     function updateHospitalSelects() {
