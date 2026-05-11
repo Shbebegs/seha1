@@ -11075,7 +11075,7 @@ setupSelectQuickSearch('batch_hospital_search', 'batch_hospital_id');
             updateTable(hospitalsTable, filtered, generateHospitalRow);
         }
     }
-    function updateHospitalSelects() {
+   function updateHospitalSelects() {
         const selects = [
             document.querySelector('#addDoctorForm [name="doctor_hospital_id"]'),
             document.getElementById('hospital_id'),
@@ -11083,7 +11083,8 @@ setupSelectQuickSearch('batch_hospital_search', 'batch_hospital_id');
             document.getElementById('edit_doctor_hospital_id'),
             document.getElementById('quick_doctor_hospital_id'),
             document.getElementById('dup_hospital_id'),
-            document.getElementById('hospital_id_edit')
+            document.getElementById('hospital_id_edit'),
+            document.getElementById('dup_hospital_select')
         ];
         const seen = new Set();
         selects.forEach(sel => {
@@ -11092,7 +11093,7 @@ setupSelectQuickSearch('batch_hospital_search', 'batch_hospital_id');
             const curVal = sel.value;
             const isLeaveForm = sel.id === 'hospital_id';
             const isBatch = sel.id === 'batch_hospital_id';
-            const isRequiredLeaveHospital = ['hospital_id', 'dup_hospital_id', 'hospital_id_edit'].includes(sel.id);
+            const isRequiredLeaveHospital = ['hospital_id', 'dup_hospital_id', 'hospital_id_edit', 'dup_hospital_select'].includes(sel.id);
             sel.innerHTML = isRequiredLeaveHospital ? '<option value="">-- اختر مستشفى --</option>' : (isBatch ? '<option value="">اختر مستشفى</option>' : '<option value="">المستشفى (اختياري)</option>');
             (currentTableData.hospitals || []).forEach(h => {
                 const opt = document.createElement('option');
@@ -11102,6 +11103,11 @@ setupSelectQuickSearch('batch_hospital_search', 'batch_hospital_id');
                 if (h.id == curVal) opt.selected = true;
                 sel.appendChild(opt);
             });
+
+            // ⚠️ التعديل الأهم: تحديث ذاكرة البحث للقائمة فور تعبئتها بالبيانات
+            if (sel.id) {
+                refreshSelectQuickSearchData(sel.id);
+            }
         });
     }
     renderHospitals();
