@@ -11186,61 +11186,69 @@ setupSelectQuickSearch('batch_hospital_search', 'batch_hospital_id');
     });
 
 // ====== التقاط أحداث أزرار المستشفيات (تعديل وحذف) عبر Event Delegation على مستوى المستند ======
+   // ====== إدارة المستشفيات (تعديل وحذف محصن ومضمون 100%) ======
     document.addEventListener('click', (e) => {
         const editBtn = e.target.closest('.btn-edit-hospital');
         const delBtn = e.target.closest('.btn-delete-hospital');
         
-        // 1. معالجة زر التعديل
         if (editBtn) {
-            e.preventDefault();
-            
             const hid = editBtn.dataset.id || '';
             const elId = document.getElementById('edit_hospital_id');
-            const elNameAr = document.getElementById('edit_hospital_name_ar');
-            const elNameEn = document.getElementById('edit_hospital_name_en');
-            const elLicense = document.getElementById('edit_hospital_license');
-            const elPrefix = document.getElementById('edit_hospital_prefix');
-            const elLogoUrl = document.getElementById('edit_hospital_logo_url');
-            const elLogoFile = document.getElementById('edit_hospital_logo_file');
-            
             if (elId) elId.value = hid;
-            if (elNameAr) elNameAr.value = editBtn.dataset.nameAr || '';
-            if (elNameEn) elNameEn.value = editBtn.dataset.nameEn || '';
-            if (elLicense) elLicense.value = editBtn.dataset.license || '';
-            if (elPrefix) elPrefix.value = editBtn.dataset.prefix || 'GSL';
-            if (elLogoUrl) elLogoUrl.value = '';
-            if (elLogoFile) elLogoFile.value = '';
+            document.getElementById('edit_hospital_name_ar').value = editBtn.dataset.nameAr || '';
+            document.getElementById('edit_hospital_name_en').value = editBtn.dataset.nameEn || '';
+            document.getElementById('edit_hospital_license').value = editBtn.dataset.license || '';
+            document.getElementById('edit_hospital_prefix').value = editBtn.dataset.prefix || 'GSL';
+            document.getElementById('edit_hospital_logo_url').value = '';
+            document.getElementById('edit_hospital_logo_file').value = '';
             
-            // تحميل إعدادات إزاحة وتكبير الشعار المحفوظة للمستشفى
+            // تحميل إعدادات إزاحة وتكبير الشعار
             logoScale = parseFloat(editBtn.dataset.logoScale || 1);
             logoOffX = parseFloat(editBtn.dataset.logoOffsetX || 0);
             logoOffY = parseFloat(editBtn.dataset.logoOffsetY || 0);
-            
             const lSlider = document.getElementById('logoScaleSlider');
             if (lSlider) lSlider.value = logoScale;
-            
             if (typeof updateLogoTransform === 'function') updateLogoTransform();
             
             const logoData = editBtn.dataset.logo || '';
             if (logoData === 'has_logo') {
-                if (typeof showLogoPreview === 'function') {
-                    showLogoPreview(REQUEST_URL + '?action=get_hospital_logo&hospital_id=' + hid + '&csrf_token=' + encodeURIComponent(CSRF_TOKEN));
-                }
+                if (typeof showLogoPreview === 'function') showLogoPreview(REQUEST_URL + '?action=get_hospital_logo&hospital_id=' + hid + '&csrf_token=' + encodeURIComponent(CSRF_TOKEN));
             } else if (logoData && logoData.startsWith('http')) {
                 if (typeof showLogoPreview === 'function') showLogoPreview(logoData);
-                if (elLogoUrl) elLogoUrl.value = logoData;
+                document.getElementById('edit_hospital_logo_url').value = logoData;
             } else {
                 const previewImg = document.getElementById('edit_hospital_logo_preview');
                 if (previewImg) previewImg.src = '';
             }
             
-            if (typeof editHospitalModal !== 'undefined' && editHospitalModal) {
-                editHospitalModal.show();
-            } else {
-                const modalEl = document.getElementById('editHospitalModal');
-                if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
-            }
+            const modalEl = document.getElementById('editHospitalModal');
+            if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
         }
+        
+        if (delBtn) {
+            const hid = delBtn.dataset.id;
+            const confirmMsgEl = document.getElementById('confirmMessage');
+            const confirmYesEl = document.getElementById('confirmYesBtn');
+            if (confirmMsgEl) confirmMsgEl.textContent = 'هل أنت متأكد من حذف هذا المستشفى؟';
+            if (confirmYesEl) confirmYesEl.textContent = 'نعم، احذف';
+            
+            currentConfirmAction = async () => {
+                showLoading();
+                const result = await sendAjaxRequest('delete_hospital', { hospital_id: hid });
+                hideLoading();
+                if (result.success) {
+                    showToast(result.message, 'success');
+                    if (result.hospitals) { 
+                        currentTableData.hospitals = result.hospitals; 
+                        if (typeof renderHospitals === 'function') renderHospitals(); 
+                        if (typeof updateHospitalSelects === 'function') updateHospitalSelects(); 
+                    }
+                }
+            };
+            const cModalEl = document.getElementById('confirmModal');
+            if (cModalEl) bootstrap.Modal.getOrCreateInstance(cModalEl).show();
+        }
+    });
         
         // 2. معالجة زر الحذف
         if (delBtn) {
@@ -11348,15 +11356,19 @@ setupSelectQuickSearch('batch_hospital_search', 'batch_hospital_id');
     });
 
     // ====== طباعة PDF ======
+    // ====== طباعة PDF (محسّن ومحصّن ضد حظر النوافذ المنبثقة) ======
     document.addEventListener('click', async (e) => {
         const printBtn = e.target.closest('.btn-print-leave');
         if (!printBtn) return;
         const leaveId = printBtn.dataset.id;
         showLoading();
         try {
-            // Open generate_pdf via GET request in new tab
             const url = REQUEST_URL + '?action=generate_pdf&leave_id=' + leaveId + '&pdf_mode=preview&csrf_token=' + encodeURIComponent(CSRF_TOKEN);
-            window.open(url, '_blank');
+            const win = window.open(url, '_blank');
+            // إذا قام المتصفح بحظر النافذة المنبثقة، نفتح التقرير مباشرة كبديل آمن
+            if (!win) {
+                location.href = url;
+            }
             hideLoading();
         } catch(err) {
             hideLoading();
