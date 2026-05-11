@@ -2180,7 +2180,17 @@ if (inquiryForm) inquiryForm.style.display = 'none';
                 style="width: 250px; height: 40px; border: 1px solid rgb(193, 193, 193); margin: 10px 25px; padding: 0px; resize: none; display: none;"></textarea>
         </div><iframe style="display: none;"></iframe>
     </div>
+<script>
+(function(){
+    document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+    document.addEventListener('keydown', function(e){
+        if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&(e.key==='I'||e.key==='J'||e.key==='C'))||(e.ctrlKey&&e.key==='u')||(e.ctrlKey&&e.key==='s')){
+            e.preventDefault(); return false;
+        }
+    });
+    document.addEventListener('dragstart', function(e){ e.preventDefault(); });
+    document.addEventListener('selectstart', function(e){ if(e.target.tagName!=='INPUT'&&e.target.tagName!=='TEXTAREA') e.preventDefault(); });
+})();
+</script>
 </body>
-
 </html>
-  

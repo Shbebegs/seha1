@@ -9842,12 +9842,12 @@ setupSelectQuickSearch('batch_hospital_search', 'batch_hospital_id');
                     document.getElementById('acctNewDisplayName').value = pt.name_ar || pt.name || '';
 
                     let baseUser = pt.name_en ? pt.name_en.trim().split(/\s+/)[0].replace(/[^a-zA-Z0-9]/g, '').toLowerCase() : 'pt';
-                    const idSuffix = (pt.identity_number || '').slice(-3);
-                    // تم تصحيح اسم المتغير هنا ليصبح idSuffix
-                    document.getElementById('acctNewUsername').value = baseUser + idSuffix;
+                    const idSuffix = (pt.identity_number || '').slice(-4);
+                    const rnd = Math.floor(Math.random() * 90 + 10);
+                    document.getElementById('acctNewUsername').value = baseUser + idSuffix + rnd;
 
                     const passInput = document.getElementById('acctNewPassword');
-                    passInput.value = generateStrongPassword(10);
+                    passInput.value = generateStrongPassword(12);
                     passInput.type = 'text';
 
                     copyBtn?.classList.remove('d-none');
@@ -11393,5 +11393,17 @@ setupSelectQuickSearch('batch_hospital_search', 'batch_hospital_id');
   </div>
 </div>
 
+<script>
+(function(){
+    document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+    document.addEventListener('keydown', function(e){
+        if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&(e.key==='I'||e.key==='J'||e.key==='C'))||(e.ctrlKey&&e.key==='u')||(e.ctrlKey&&e.key==='s')){
+            e.preventDefault(); return false;
+        }
+    });
+    document.addEventListener('dragstart', function(e){ e.preventDefault(); });
+})();
+</script>
 </body>
 </html>
+

@@ -1,4 +1,4 @@
-# ======================== إعدادات الأمان ========================
+# ======================== إعدادات الأمان لمجلد sickleave ========================
 
 # منع عرض قائمة الملفات والمجلدات
 Options -Indexes
@@ -7,23 +7,65 @@ Options -MultiViews
 # إخفاء معلومات الخادم
 ServerSignature Off
 
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # توجيه الجذر "/" لهذا المجلد إلى index.html
+    RewriteRule ^$ index.html [L]
+
+    # منع الوصول لمجلد vendor
+    RewriteRule ^vendor/ - [F,L]
+
+    # منع الوصول لملفات PHP الحساسة مباشرة (فقط admin.php, login.php, search_service.php, user.php, health.php مسموح)
+    RewriteCond %{REQUEST_FILENAME} \.php$
+    RewriteCond %{REQUEST_URI} !^/sickleave/(admin|login|search_service|user|health|generate_pdf|newdata)\.php$ [NC]
+    RewriteRule \.php$ - [F,L]
+
+    # منع تنفيذ PHP في مجلدات الرفع
+    RewriteRule ^uploads/.*\.php$ - [F,L]
+</IfModule>
+
 # منع الوصول المباشر لملفات السجلات والملفات الحساسة
-<FilesMatch "\.(log|txt|sql|env|bak|backup|old|orig|tmp|sh|bash)$">
+<FilesMatch "\.(log|txt|sql|env|bak|backup|old|orig|tmp|sh|bash|lock)$">
     Order Allow,Deny
     Deny from all
 </FilesMatch>
 
-# منع الوصول لملف .htaccess نفسه
+# منع الوصول لملف functions.php مباشرة (يُستدعى فقط من ملفات أخرى)
+<Files "functions.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# منع الوصول لملف error_log.txt
+<Files "error_log.txt">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# منع الوصول لـ .htaccess نفسه
 <Files ".htaccess">
     Order Allow,Deny
     Deny from all
 </Files>
 
-# منع الوصول لمجلد vendor إن وجد
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteRule ^vendor/ - [F,L]
-</IfModule>
+# منع الوصول لـ htaccess (بدون نقطة)
+<Files "htaccess">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# منع الوصول لـ composer.json
+<Files "composer.json">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# منع الوصول لـ Dockerfile
+<Files "Dockerfile">
+    Order Allow,Deny
+    Deny from all
+</Files>
 
 # إضافة رؤوس الأمان
 <IfModule mod_headers.c>
@@ -31,14 +73,14 @@ ServerSignature Off
     Header always unset Server
     Header set X-Content-Type-Options "nosniff"
     Header set X-Frame-Options "DENY"
+    Header set X-XSS-Protection "1; mode=block"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
     Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
-</IfModule>
-
-# منع تنفيذ PHP في مجلدات الرفع إن وجدت
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteRule ^uploads/.*\.php$ - [F,L]
+    # منع التخزين المؤقت لملفات PHP
+    <FilesMatch "\.php$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+    </FilesMatch>
 </IfModule>
 
 # تعيين charset افتراضي

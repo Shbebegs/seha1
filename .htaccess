@@ -1,0 +1,61 @@
+# ======================== إعدادات الأمان والتوجيه الرئيسي ========================
+
+# منع عرض قائمة الملفات والمجلدات
+Options -Indexes
+Options -MultiViews
+
+# إخفاء معلومات الخادم
+ServerSignature Off
+
+# تفعيل mod_rewrite
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # توجيه الجذر "/" إلى sickleave/index.html
+    RewriteRule ^$ /sickleave/index.html [L,R=302]
+
+    # منع الوصول لملفات vendor
+    RewriteRule ^vendor/ - [F,L]
+    RewriteRule ^sickleave/vendor/ - [F,L]
+
+    # منع الوصول لملف hellllloo.php
+    RewriteRule ^hellllloo\.php$ - [F,L]
+</IfModule>
+
+# منع الوصول المباشر لملفات حساسة
+<FilesMatch "\.(log|txt|sql|env|bak|backup|old|orig|tmp|sh|bash|json|lock|md|git)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# السماح بملفات الأصول
+<FilesMatch "\.(svg|png|jpg|jpeg|gif|ico|css|js|woff|woff2|ttf|eot)$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>
+
+# منع الوصول لـ .htaccess نفسه
+<Files ".htaccess">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# منع الوصول لـ Dockerfile و docker-entrypoint.sh و start.sh و composer.json
+<FilesMatch "^(Dockerfile|docker-entrypoint\.sh|start\.sh|composer\.json|composer\.lock)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# إضافة رؤوس الأمان
+<IfModule mod_headers.c>
+    Header always unset X-Powered-By
+    Header always unset Server
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "DENY"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>
+
+# تعيين charset افتراضي
+AddDefaultCharset UTF-8

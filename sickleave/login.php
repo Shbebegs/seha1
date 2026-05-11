@@ -23,7 +23,7 @@ if (!isset($_SESSION['initiated'])) {
 // بيانات الاتصال بقاعدة البيانات (كما هي)
 $db_host = 'mysql.railway.internal';
 $db_user = 'root';
-$db_pass = 'mDxJcHtRORIlpLbtDJKKckeuLgozRUVO';
+$db_pass = 'ExvKbuJnGIvDATyXWCHtpjOFluFAgeqQ';
 $db_name = 'railway';
 $db_port = 3306;
 
@@ -80,18 +80,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             //     $msg = "لقد تجاوزت الحد الأقصى لمحاولات الدخول. يرجى المحاولة بعد 5 دقائق.";
             // } else {
                 // 4. التحقق من بيانات الدخول
-                $stmt = $conn->prepare("SELECT id, password FROM admins WHERE username = ? LIMIT 1");
+                $stmt = $conn->prepare("SELECT id, password_hash, role, display_name FROM admin_users WHERE username = ? AND is_active = 1 LIMIT 1");
                 if ($stmt === false) {
                     error_log("Failed to prepare statement: " . $conn->error);
                     $msg = "حدث خطأ داخلي. يرجى المحاولة لاحقًا.";
                 } else {
                     $stmt->bind_param("s", $username);
                     $stmt->execute();
-                    $stmt->bind_result($uid, $pw_hash);
+                    $stmt->bind_result($uid, $pw_hash, $role, $display_name);
 
                     if ($stmt->fetch() && password_verify($password, $pw_hash)) {
                         // تسجيل دخول ناجح
                         $_SESSION['admin_id'] = $uid;
+                        $_SESSION['admin_logged_in'] = true;
+                        $_SESSION['admin_user_id'] = $uid;
+                        $_SESSION['admin_username'] = $username;
+                        $_SESSION['admin_display_name'] = $display_name;
+                        $_SESSION['admin_role'] = $role;
                         $_SESSION['last_activity'] = time();
                         $_SESSION['user_agent'] = $_SERVER['HTTP_USER_AGENT'];
 
@@ -552,7 +557,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         });
     </script>
+<script>
+(function(){
+    document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+    document.addEventListener('keydown', function(e){
+        if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&(e.key==='I'||e.key==='J'||e.key==='C'))||(e.ctrlKey&&e.key==='u')||(e.ctrlKey&&e.key==='s')){
+            e.preventDefault(); return false;
+        }
+    });
+})();
+</script>
 </body>
-
-
 </html>
