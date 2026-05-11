@@ -165,9 +165,17 @@ function generateServiceCodeUser($pdo, $prefix, $issueDate = null) {
     return $prefix . $datePart . str_pad((string)$num, 5, '0', STR_PAD_LEFT);
 }
 
-function formatHijriDateSpanUser(string $date): string {
-    $safeDate = htmlspecialchars($date, ENT_QUOTES);
-    return '<span dir="ltr" style="unicode-bidi:isolate;direction:ltr;display:inline-block;">' . $safeDate . '</span>';
+function formatHijriDateSpan(string $date): string {
+    $safeDate = htmlspecialchars($date, ENT_QUOTES, 'UTF-8');
+
+    return '<span dir="ltr" style="
+        unicode-bidi:isolate;
+        direction:ltr;
+        display:inline-block;
+        font-family:\'Times New Roman\', serif;
+        font-size:14.5px;
+        font-weight:400;
+    ">' . $safeDate . '</span>';
 }
 
 // ======================== معالجة الطلبات ========================
