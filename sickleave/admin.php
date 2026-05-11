@@ -1314,6 +1314,7 @@ if ($pdfMode === 'download') {
         @unlink($tmpHtml);
         error_log('WeasyPrint Error: ' . $output);
     }
+    return;
 }
     // ==================== PREVIEW MODE ====================
   header('Content-Type: text/html; charset=utf-8');
@@ -11409,4 +11410,3 @@ setupSelectQuickSearch('batch_hospital_search', 'batch_hospital_id');
 </script>
 </body>
 </html>
-
