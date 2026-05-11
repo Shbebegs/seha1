@@ -1168,17 +1168,15 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
 
     // ==================== DOWNLOAD MODE (WeasyPrint) ====================
 if ($pdfMode === 'download') {
-    // Build full HTML with embedded SVGs as absolute URLs
+    // Build full HTML with embedded SVGs and Fonts as absolute URLs
     $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']) . '/';
     
     $pdfHtml = '<!DOCTYPE html><html lang="ar"><head><meta charset="utf-8"/>';
     $pdfHtml .= '<title>Sick Leave Report</title>';
     
-    // Google Fonts for WeasyPrint - Added Tinos (Times New Roman equivalent)
+    // Google Fonts strictly for Arabic and Inter placeholders
     $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap" />';
-    $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap" />';
     $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap" />';
-    $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tinos:ital,wght@0,400;0,700;1,400;1,700&display=swap" />';
 
     $pdfHtml .= '<style data-tag="reset-style-sheet">';
     $pdfHtml .= 'html { line-height: 1.15; } body { margin: 0; }';
@@ -1193,24 +1191,42 @@ if ($pdfMode === 'download') {
     $pdfHtml .= '</style>';
 
     $pdfHtml .= '<style>';
+    
+    // =========================================================
+    // LOAD YOUR LOCAL OPENTYPE (.otf) FILES
+    // =========================================================
+    $pdfHtml .= '@font-face {';
+    $pdfHtml .= '    font-family: "Times New Roman";';
+    $pdfHtml .= '    src: url("' . $baseUrl . 'times_regular.otf") format("opentype");';
+    $pdfHtml .= '    font-weight: 400;';
+    $pdfHtml .= '    font-style: normal;';
+    $pdfHtml .= '}';
+
+    $pdfHtml .= '@font-face {';
+    $pdfHtml .= '    font-family: "Times New Roman";';
+    $pdfHtml .= '    src: url("' . $baseUrl . 'times_bold.otf") format("opentype");';
+    $pdfHtml .= '    font-weight: 700;';
+    $pdfHtml .= '    font-style: normal;';
+    $pdfHtml .= '}';
+    // =========================================================
+
     $pdfHtml .= '@page { size: 842.25px 1190.25px; margin: 0; }';
     $pdfHtml .= '.group1-container1 { width: 842.25px; height: 1190.25px; position: relative; background-color: transparent; margin: 0; padding: 0; }';
     $pdfHtml .= '.group1-thq-group1-elm { width: 842.25px; height: 1190.25px; position: relative; background-color: white; margin: 0; padding: 0; }';
     
-    // Tables & Data Cells
+    // Tables & Data Cells directly referencing the embedded font
     $pdfHtml .= '.info-table { position: absolute; top: 242px; left: 36px; width: 770px; border-collapse: separate; border-spacing: 0; border: 1px solid #cccccc; border-radius: 8px; overflow: hidden; background-color: transparent; z-index: 10; }';
     $pdfHtml .= '.info-table td { border-bottom: 1px solid #cccccc; border-right: 1px solid #cccccc; height: 42px; text-align: center; vertical-align: middle; padding: 4px 8px; }';
     $pdfHtml .= '.info-table td:last-child { border-right: none; } .info-table tr:last-child td { border-bottom: none; }';
     
-    // Updated font-family to "Tinos" for Times New Roman style
-    $pdfHtml .= '.info-table .en-title { width: 161px; color: rgba(54, 111, 181, 1); font-size: 13.5px; font-weight: 700; text-align: center; font-family: "Tinos", serif; }';
-    $pdfHtml .= '.info-table .data-cell { width: 240px; color: rgba(44, 62, 119, 1); font-size: 13.5px; font-family: "Tinos", serif; font-weight: 400; text-align: center; }';
+    $pdfHtml .= '.info-table .en-title { width: 161px; color: rgba(54, 111, 181, 1); font-size: 13.5px; font-weight: 700; text-align: center; font-family: "Times New Roman", serif; }';
+    $pdfHtml .= '.info-table .data-cell { width: 240px; color: rgba(44, 62, 119, 1); font-size: 13.5px; font-family: "Times New Roman", serif; font-weight: 400; text-align: center; }';
     
     $pdfHtml .= '.info-table .date-cell { font-size: 13.9px; } .info-table .data-cell.ar-text { font-family: "Noto Sans Arabic", sans-serif; }';
     $pdfHtml .= '.info-table .ar-title { width: 140px; color: rgba(54, 111, 181, 1); font-size: 13.5px; font-weight: 700; text-align: center; font-family: "Noto Sans Arabic", sans-serif; white-space: nowrap; }';
     $pdfHtml .= '.info-table tr.blue-row td { background-color: #2c3e77; color: #ffffff; border-bottom: 1px solid #cccccc; border-right: 1px solid #cccccc; }';
     $pdfHtml .= '.info-table tr.blue-row td:last-child { border-right: none; }';
-    $pdfHtml .= '.info-table .blue-row .data-cell.ar-text { color: rgba(255, 255, 255, 1); font-size: 13.5px; font-family: "Tinos", serif; font-weight: 400; }';
+    $pdfHtml .= '.info-table .blue-row .data-cell.ar-text { color: rgba(255, 255, 255, 1); font-size: 13.5px; font-family: "Times New Roman", serif; font-weight: 400; }';
     $pdfHtml .= '.info-table .blue-row .data-cell { color: rgba(255, 255, 255, 1); }';
     $pdfHtml .= '.info-table tr.gray-row td { background-color: #f7f7f7; }';
     
@@ -1223,17 +1239,17 @@ if ($pdfMode === 'download') {
     $pdfHtml .= '.bottom-right-placeholder { position: absolute; top: 1005px; left: 657.17px; width: 149.96px; height: 71.23px; display: flex; align-items: center; justify-content: center; }';
     $pdfHtml .= '.header-placeholder { top: -55px; left: 320px; width: 160px; height: 50px; position: absolute; display: flex; align-items: center; justify-content: center; }';
     
-    // Text Elements
+    // Text Elements referencing the embedded font
     $pdfHtml .= '.group1-thq-text-elm41 { top: 40px; left: 289px; color: rgba(48, 109, 181, 1); width: 215px; position: absolute; font-size: 22.5px; font-weight: 700; text-align: center; line-height: 30px; }';
-    $pdfHtml .= '.group1-thq-text-elm44 { top: -10px; left: 310px; color: rgba(0, 0, 0, 1); position: absolute; font-size: 17.3px; font-weight: 400; text-align: left; font-family: "Tinos", serif; }';
+    $pdfHtml .= '.group1-thq-text-elm44 { top: -10px; left: 310px; color: rgba(0, 0, 0, 1); position: absolute; font-size: 17.3px; font-weight: 400; text-align: left; font-family: "Times New Roman", serif; }';
     $pdfHtml .= '.group1-thq-hospitallogoandthename-elm { top: 760px; left: 438.94px; width: 403px; height: 202.78px; display: flex; position: absolute; align-items: flex-start; }';
     $pdfHtml .= '.placeholder-logo-hospital { top: -12px; left: 133px; width: 136px; height: 136px; position: absolute; display: flex; align-items: center; justify-content: center; }';
     $pdfHtml .= '.group1-thq-text-elm18 { top: 120px; color: rgba(0, 0, 0, 1); width: 403px; height: auto; position: absolute; font-size: 12.8px; text-align: center; line-height: 22px; }';
     $pdfHtml .= '.group1-thq-thedateofissueandalsotimeofissue-elm { top: calc(989.85px + var(--footer-offset)); left: 37.37px; width: 250px; height: 56px; display: flex; position: absolute; align-items: flex-start; }';
-    $pdfHtml .= '.group1-thq-text-elm22 { color: rgba(0, 0, 0, 1); font-size: 12.5px; font-weight: 700; text-align: left; line-height: 28px; font-family: "Tinos", serif; position: absolute; white-space: nowrap; }';
+    $pdfHtml .= '.group1-thq-text-elm22 { color: rgba(0, 0, 0, 1); font-size: 12.5px; font-weight: 700; text-align: left; line-height: 28px; font-family: "Times New Roman", serif; position: absolute; white-space: nowrap; }';
     $pdfHtml .= '.group1-thq-text-elm36 { top: calc(724.55px + var(--footer-offset)); left: 29.23px; color: rgba(0, 0, 0, 1); position: absolute; font-size: 12px; font-weight: 700; text-align: center; font-family: "Noto Sans Arabic", sans-serif; line-height: 23px; }';
-    $pdfHtml .= '.group1-thq-text-elm39 { top: calc(775.17px + var(--footer-offset)); left: 55px; color: rgba(0, 0, 0, 1); position: absolute; font-size: 12px; font-weight: 700; text-align: left; font-family: "Tinos", serif; }';
-    $pdfHtml .= '.group1-thq-text-elm40 { top: calc(798.91px + var(--footer-offset)); left: 108.35px; color: rgba(20, 0, 255, 1); position: absolute; font-size: 11px; font-weight: 700; text-align: left; text-decoration: underline; font-family: "Tinos", serif; }';
+    $pdfHtml .= '.group1-thq-text-elm39 { top: calc(775.17px + var(--footer-offset)); left: 55px; color: rgba(0, 0, 0, 1); position: absolute; font-size: 12px; font-weight: 700; text-align: left; font-family: "Times New Roman", serif; }';
+    $pdfHtml .= '.group1-thq-text-elm40 { top: calc(798.91px + var(--footer-offset)); left: 108.35px; color: rgba(20, 0, 255, 1); position: absolute; font-size: 11px; font-weight: 700; text-align: left; text-decoration: underline; font-family: "Times New Roman", serif; }';
     
     // Footer & Misc
     $pdfHtml .= '.placeholder-136 { position: absolute; top: 620px; left: 122px; width: 136px; height: 136px; display: flex; align-items: center; justify-content: center; }';
@@ -1250,11 +1266,10 @@ if ($pdfMode === 'download') {
     $pdfHtml .= $pdfBody;
     $pdfHtml .= '</body></html>';
     
-    // Save HTML to temp file
+    // Save HTML to temp file safely
     $tmpHtml = '/tmp/weasyprint/report_' . uniqid() . '.html';
     $tmpPdf = '/tmp/weasyprint/report_' . uniqid() . '.pdf';
     
-    // Ensure the directory exists
     if (!is_dir('/tmp/weasyprint')) {
         mkdir('/tmp/weasyprint', 0777, true);
     }
@@ -1286,7 +1301,6 @@ if ($pdfMode === 'download') {
         error_log('WeasyPrint Error: ' . $output);
     }
 }
-
     // ==================== PREVIEW MODE ====================
     header('Content-Type: text/html; charset=utf-8');
     
