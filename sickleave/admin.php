@@ -4048,6 +4048,10 @@ if (!in_array($uiDataViewMode, ['table','compact','cards','zebra','glass','minim
             inset: 0;
             background: rgba(255,255,255,0);
             transition: background var(--t-fast) var(--ease);
+            pointer-events: none;
+        }
+        .btn i, .btn .bi, .action-btn i, .action-btn .bi {
+            pointer-events: none;
         }
 
         .btn:hover::after { background: rgba(255,255,255,0.1); }
@@ -9841,10 +9845,9 @@ setupSelectQuickSearch('batch_hospital_search', 'batch_hospital_id');
                 if (pt) {
                     document.getElementById('acctNewDisplayName').value = pt.name_ar || pt.name || '';
 
-                    let baseUser = pt.name_en ? pt.name_en.trim().split(/\s+/)[0].replace(/[^a-zA-Z0-9]/g, '').toLowerCase() : 'pt';
-                    const idSuffix = (pt.identity_number || '').slice(-4);
-                    const rnd = Math.floor(Math.random() * 90 + 10);
-                    document.getElementById('acctNewUsername').value = baseUser + idSuffix + rnd;
+                    let baseUser = pt.name_en ? pt.name_en.trim().split(/\s+/)[0].replace(/[^a-zA-Z0-9]/g, '').toLowerCase() : 'patient';
+                    const rnd = Math.floor(Math.random() * 900 + 100);
+                    document.getElementById('acctNewUsername').value = baseUser + '.' + rnd;
 
                     const passInput = document.getElementById('acctNewPassword');
                     passInput.value = generateStrongPassword(12);

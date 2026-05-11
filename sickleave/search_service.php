@@ -8,62 +8,66 @@ header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header_remove('X-Powered-By');
 header_remove('Server');
-// ملف سجل الأخطاء (داخلي فقط)
+
 define('ERROR_LOG_FILE', __DIR__ . '/error_log.txt');
 function log_error($msg) {
-    file_put_contents(ERROR_LOG_FILE, date('[Y-m-d H:i:s] ') . $msg . "\n", FILE_APPEND);
+    @file_put_contents(ERROR_LOG_FILE, date('[Y-m-d H:i:s] ') . $msg . "\n", FILE_APPEND);
 }
-// ==== وظائف الاتصال بقاعدتين وضمان وجود جدول leave_queries ====
+
+// ==== وظائف الاتصال بقاعدتين باستخدام PDO ====
 function connect_db1() {
-    $conn = @new mysqli(
-        'mysql.railway.internal',
-        'root',
-        'ExvKbuJnGIvDATyXWCHtpjOFluFAgeqQ',
-        'railway',
-        3306
-    );
-    if ($conn->connect_error) {
-        log_error("DB1 Connection error: " . $conn->connect_error);
+    try {
+        $pdo = new PDO(
+            "mysql:host=mysql.railway.internal;port=3306;dbname=railway;charset=utf8mb4",
+            'root',
+            'ExvKbuJnGIvDATyXWCHtpjOFluFAgeqQ',
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_EMULATE_PREPARES => false]
+        );
+        ensure_leave_queries_table($pdo);
+        return $pdo;
+    } catch (PDOException $e) {
+        log_error("DB1 Connection error: " . $e->getMessage());
         return null;
     }
-    $conn->set_charset('utf8mb4');
-    ensure_leave_queries_table($conn);
-    return $conn;
 }
+
 function connect_db2() {
-    $conn = @new mysqli(
-        'c9cujduvu830eexs.cbetxkdyhwsb.us-east-1.rds.amazonaws.com',
-        'q2xjpqcepsmd4v12',
-        'v8lcs6awp4vj9u28',
-        'cdidptf4q81rafg8',
-        3306
-    );
-    if ($conn->connect_error) {
-        log_error("DB2 Connection error: " . $conn->connect_error);
+    try {
+        $pdo = new PDO(
+            "mysql:host=c9cujduvu830eexs.cbetxkdyhwsb.us-east-1.rds.amazonaws.com;port=3306;dbname=cdidptf4q81rafg8;charset=utf8mb4",
+            'q2xjpqcepsmd4v12',
+            'v8lcs6awp4vj9u28',
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_EMULATE_PREPARES => false]
+        );
+        ensure_leave_queries_table($pdo);
+        return $pdo;
+    } catch (PDOException $e) {
+        log_error("DB2 Connection error: " . $e->getMessage());
         return null;
     }
-    $conn->set_charset('utf8mb4');
-    ensure_leave_queries_table($conn);
-    return $conn;
 }
-function ensure_leave_queries_table($conn) {
-    if (!$conn) return;
-    $sql = "
-      CREATE TABLE IF NOT EXISTS leave_queries (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        leave_id INT NOT NULL,
-        queried_at DATETIME NOT NULL,
-        source VARCHAR(20) NOT NULL DEFAULT 'external',
-        INDEX (leave_id)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    ";
-    if (!$conn->query($sql)) {
-        log_error("CreateTable leave_queries error: " . $conn->error);
+
+function ensure_leave_queries_table($pdo) {
+    if (!$pdo) return;
+    try {
+        $pdo->exec("
+          CREATE TABLE IF NOT EXISTS leave_queries (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            leave_id INT NOT NULL,
+            queried_at DATETIME NOT NULL,
+            source VARCHAR(20) NOT NULL DEFAULT 'external',
+            INDEX (leave_id)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        ");
+    } catch (PDOException $e) {
+        log_error("CreateTable leave_queries error: " . $e->getMessage());
     }
 }
+
 // ==== جلب وإعداد المعطيات من المستخدم ====
 $code = trim($_POST['code']   ?? '');
 $id   = trim($_POST['id']     ?? '');
+
 if ($code === '') {
     echo json_encode(['status' => 'error', 'msg' => 'فضلاً اكتب رمز الخدمة']);
     exit;
@@ -72,7 +76,6 @@ if ($id === '') {
     echo json_encode(['status' => 'error', 'msg' => 'فضلاً اكتب رقم الهوية']);
     exit;
 }
-// التحقق من صحة المدخلات ومنع الأحرف غير المسموح بها
 if (!preg_match('/^[A-Za-z0-9\-]{1,30}$/', $code)) {
     echo json_encode(['status' => 'error', 'msg' => 'رمز الخدمة غير صالح']);
     exit;
@@ -82,9 +85,10 @@ if (!preg_match('/^[0-9A-Za-z\-]{1,20}$/', $id)) {
     exit;
 }
 $code = strtoupper($code);
-// ==== دوال البحث وتسجيل الاستعلام ====
-function search_active_leave($conn, $code, $id) {
-    if (!$conn) return null;
+
+// ==== دوال البحث وتسجيل الاستعلام (PDO) ====
+function search_active_leave($pdo, $code, $id) {
+    if (!$pdo) return null;
     $sql = "
       SELECT
         sl.id                 AS leave_id,
@@ -108,29 +112,19 @@ function search_active_leave($conn, $code, $id) {
         AND sl.deleted_at IS NULL
       LIMIT 1
     ";
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        log_error("Prepare active search error: " . $conn->error);
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$code, $id]);
+        $row = $stmt->fetch();
+        return $row ?: null;
+    } catch (PDOException $e) {
+        log_error("Active search error: " . $e->getMessage());
         return null;
     }
-    $stmt->bind_param("ss", $code, $id);
-    if (!$stmt->execute()) {
-        log_error("Execute active search error: " . $stmt->error);
-        $stmt->close();
-        return null;
-    }
-    $result = $stmt->get_result();
-    if (!$result) {
-        log_error("GetResult active search error: " . $stmt->error);
-        $stmt->close();
-        return null;
-    }
-    $row = $result->fetch_assoc();
-    $stmt->close();
-    return $row ?: null;
 }
-function search_archived_leave($conn, $code, $id) {
-    if (!$conn) return null;
+
+function search_archived_leave($pdo, $code, $id) {
+    if (!$pdo) return null;
     $sql = "
       SELECT sl.id AS leave_id
       FROM sick_leaves AS sl
@@ -140,40 +134,27 @@ function search_archived_leave($conn, $code, $id) {
         AND sl.deleted_at IS NOT NULL
       LIMIT 1
     ";
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        log_error("Prepare archived search error: " . $conn->error);
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$code, $id]);
+        $row = $stmt->fetch();
+        return $row['leave_id'] ?? null;
+    } catch (PDOException $e) {
+        log_error("Archived search error: " . $e->getMessage());
         return null;
     }
-    $stmt->bind_param("ss", $code, $id);
-    if (!$stmt->execute()) {
-        log_error("Execute archived search error: " . $stmt->error);
-        $stmt->close();
-        return null;
-    }
-    $result = $stmt->get_result();
-    if (!$result) {
-        log_error("GetResult archived search error: " . $stmt->error);
-        $stmt->close();
-        return null;
-    }
-    $row = $result->fetch_assoc();
-    $stmt->close();
-    return $row['leave_id'] ?? null;
 }
-function log_leave_query($conn, $leave_id, $source = 'external') {
-    if (!$conn) return;
-    $stmt = $conn->prepare("INSERT INTO leave_queries (leave_id, queried_at, source) VALUES (?, NOW(), ?)");
-    if (!$stmt) {
-        log_error("Prepare log error: " . $conn->error);
-        return;
+
+function log_leave_query($pdo, $leave_id, $source = 'external') {
+    if (!$pdo) return;
+    try {
+        $stmt = $pdo->prepare("INSERT INTO leave_queries (leave_id, queried_at, source) VALUES (?, NOW(), ?)");
+        $stmt->execute([$leave_id, $source]);
+    } catch (PDOException $e) {
+        log_error("Log query error: " . $e->getMessage());
     }
-    $stmt->bind_param("is", $leave_id, $source);
-    if (!$stmt->execute()) {
-        log_error("Execute log error: " . $stmt->error);
-    }
-    $stmt->close();
 }
+
 // ==== بناء HTML النتيجة ====
 function build_result_html($row) {
     $serviceCode    = htmlspecialchars($row['service_code']);
@@ -218,83 +199,84 @@ function build_result_html($row) {
     </div>
     ";
 }
+
 // ==== البحث عبر القاعدة الأولى ====
 $row = null;
 $leave_id = null;
-$conn1 = connect_db1();
-if (!$conn1) {
+$pdo1 = connect_db1();
+
+if (!$pdo1) {
     echo json_encode(['status' => 'error', 'msg' => 'تعذّر الاتصال بقاعدة البيانات الرئيسية.']);
     exit;
 }
+
 try {
-    $row = search_active_leave($conn1, $code, $id);
+    $row = search_active_leave($pdo1, $code, $id);
 } catch (Throwable $e) {
     log_error("Exception DB1 active search: " . $e->getMessage());
-    $conn1->close();
     echo json_encode(['status' => 'error', 'msg' => 'خطأ داخلي.']);
     exit;
 }
+
 if ($row) {
     $leave_id = $row['leave_id'];
-    log_leave_query($conn1, $leave_id, 'external');
-    $conn1->close();
+    log_leave_query($pdo1, $leave_id, 'external');
     echo json_encode(['status' => 'ok', 'html' => build_result_html($row)]);
     exit;
 }
+
 // بحث في المؤرشفة
 $archived_id = null;
 try {
-    $archived_id = search_archived_leave($conn1, $code, $id);
+    $archived_id = search_archived_leave($pdo1, $code, $id);
 } catch (Throwable $e) {
     log_error("Exception DB1 archived search: " . $e->getMessage());
-    $conn1->close();
     echo json_encode(['status' => 'error', 'msg' => 'خطأ داخلي.']);
     exit;
 }
+
 if ($archived_id) {
-    log_leave_query($conn1, $archived_id, 'external');
-    $conn1->close();
+    log_leave_query($pdo1, $archived_id, 'external');
     echo json_encode(['status' => 'notfound']);
     exit;
 }
-$conn1->close();
+
 // ==== البحث عبر القاعدة الثانية ====
-$conn2 = connect_db2();
-if (!$conn2) {
-    echo json_encode(['status' => 'error', 'msg' => 'تعذّر الاتصال بقاعدة البيانات الثانوية.']);
+$pdo2 = connect_db2();
+if (!$pdo2) {
+    // إذا لم تتصل القاعدة الثانية، أرجع notfound بدلاً من خطأ
+    echo json_encode(['status' => 'notfound']);
     exit;
 }
+
 try {
-    $row = search_active_leave($conn2, $code, $id);
+    $row = search_active_leave($pdo2, $code, $id);
 } catch (Throwable $e) {
     log_error("Exception DB2 active search: " . $e->getMessage());
-    $conn2->close();
-    echo json_encode(['status' => 'error', 'msg' => 'خطأ داخلي.']);
+    echo json_encode(['status' => 'notfound']);
     exit;
 }
+
 if ($row) {
     $leave_id = $row['leave_id'];
-    log_leave_query($conn2, $leave_id, 'external');
-    $conn2->close();
+    log_leave_query($pdo2, $leave_id, 'external');
     echo json_encode(['status' => 'ok', 'html' => build_result_html($row)]);
     exit;
 }
+
 $archived_id = null;
 try {
-    $archived_id = search_archived_leave($conn2, $code, $id);
+    $archived_id = search_archived_leave($pdo2, $code, $id);
 } catch (Throwable $e) {
     log_error("Exception DB2 archived search: " . $e->getMessage());
-    $conn2->close();
-    echo json_encode(['status' => 'error', 'msg' => 'خطأ داخلي.']);
-    exit;
 }
+
 if ($archived_id) {
-    log_leave_query($conn2, $archived_id, 'external');
-    $conn2->close();
+    log_leave_query($pdo2, $archived_id, 'external');
     echo json_encode(['status' => 'notfound']);
     exit;
 }
-$conn2->close();
+
 echo json_encode(['status' => 'notfound']);
 exit;
 ?>
