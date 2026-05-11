@@ -9793,18 +9793,23 @@ setupSelectQuickSearch('acctNewLinkPatientSearch', 'acctNewLinkPatient');
         }
 
         // 2. تصفير الحقول وإخفاء زر النسخ عند فتح المودال
-        document.getElementById('acctAddUserBtn')?.addEventListener('click', () => {
-            document.getElementById('acctNewUsername').value = '';
-            document.getElementById('acctNewPassword').value = '';
-            document.getElementById('acctNewPassword').type = 'password';
-            document.getElementById('acctNewDisplayName').value = '';
-            if (document.getElementById('acctNewLinkPatient')) document.getElementById('acctNewLinkPatient').value = '0';
-            if (document.getElementById('acctNewAllowedDays')) document.getElementById('acctNewAllowedDays').value = '0';
-            
-            document.getElementById('copyAcctMsgBtn')?.classList.add('d-none');
-            acctNewUserModal.show();
-        });
+       document.getElementById('acctAddUserBtn')?.addEventListener('click', () => {
+    // تصفير الحقول السابقة
+    document.getElementById('acctNewUsername').value = '';
+    document.getElementById('acctNewPassword').value = '';
+    document.getElementById('acctNewDisplayName').value = '';
+    
+    // تصفير حقل البحث الجديد وإعادة إظهار كل الخيارات
+    const searchInput = document.getElementById('acctNewLinkPatientSearch');
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.dispatchEvent(new Event('input')); // لتحديث القائمة وإظهار الكل
+    }
 
+    if (document.getElementById('acctNewLinkPatient')) document.getElementById('acctNewLinkPatient').value = '0';
+    document.getElementById('copyAcctMsgBtn')?.classList.add('d-none');
+    acctNewUserModal.show();
+});
         // 3. التعبئة التلقائية وإظهار زر النسخ عند اختيار المريض
         document.getElementById('acctNewLinkPatient')?.addEventListener('change', function() {
             const ptId = this.value;
