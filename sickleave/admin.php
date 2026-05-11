@@ -1122,7 +1122,7 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
     // ==================== Report Body HTML ====================
     $reportBody = '<div class="report-page">';
     $reportBody .= '<div class="top-right-placeholder"><img src="sehalogoright.svg" style="width:100%;height:100%"/></div>';
-    $reportBody .= '<div class="top-left-placeholder"><img src="sehalogoleft.svg" style="width:100%;height:100%"/></div>';
+    $reportBody .= '<div class="top-left-placeholder"><img src="sehalogoleft.png" style="width:100%;height:100%"/></div>';
     $reportBody .= '<div class="bottom-right-placeholder"><img src="bottomright.svg" style="width:100%;height:100%"/></div>';
     $reportBody .= '<div class="group1-thq-staticinfo-elm">';
     $reportBody .= '<div class="header-placeholder"><img src="header.svg" style="width:100%;height:100%"/></div>';
