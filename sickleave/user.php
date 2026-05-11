@@ -525,85 +525,99 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
     // PDF download mode - use same template as admin
     // PDF download mode - use same template as admin
 if ($pdfMode === 'download') {
-    // 1. تعريف الـ Base URL بشكل ديناميكي كما في النسخة الثانية لضمان جلب الخطوط
+    // 1. تعريف الـ Base URL بشكل ديناميكي لجلب الخطوط والصور بمسارات مطلقة
     $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']) . '/';
     
+    // تنظيف اسم الملف
     $scFile = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sc);
 
     $pdfHtml  = '<!DOCTYPE html><html lang="ar"><head><meta charset="utf-8"/>';
     $pdfHtml .= '<title>Sick Leave Report</title>';
     
-    // 2. تحديث روابط Google Fonts (حذف STIX وإبقاء Noto و Inter)
+    // 2. روابط Google Fonts
     $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap" />';
     $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap" />';
     
-    $pdfHtml .= '<style data-tag="reset-style-sheet">html{line-height:1.15}body{margin:0}*{box-sizing:border-box;border-width:0;border-style:solid}p,li,ul,pre,div,h1,h2,h3,h4,h5,h6,figure,blockquote,figcaption{margin:0;padding:0}a{color:inherit;text-decoration:inherit}</style>';
-    $pdfHtml .= '<style data-tag="default-style-sheet">html{font-family:Inter,sans-serif;font-size:16px}body{font-weight:400;color:#191818;background:#ffffff;margin:0;padding:0}</style>';
-    
-    // 3. إضافة تعريف الخطوط المحلية (Times New Roman) بنفس طريقة النسخة الثانية
+    // 3. التنسيقات (CSS)
     $pdfHtml .= '<style>';
+    // Reset & Defaults
+    $pdfHtml .= 'html{line-height:1.15; font-family:Inter, sans-serif; font-size:16px;} body{margin:0; font-weight:400; color:#191818; background:#ffffff;}';
+    $pdfHtml .= '*{box-sizing:border-box; border-width:0; border-style:solid;} p,li,ul,pre,div,h1,h2,h3,h4,h5,h6,figure,blockquote,figcaption{margin:0; padding:0;} a{color:inherit; text-decoration:inherit;}';
+    
+    // تعريف الخطوط المحلية (Times New Roman)
     $pdfHtml .= '@font-face { font-family: "Times New Roman"; src: url("' . $baseUrl . 'times_regular.otf") format("opentype"); font-weight: 400; font-style: normal; }';
     $pdfHtml .= '@font-face { font-family: "Times New Roman"; src: url("' . $baseUrl . 'times_bold.otf") format("opentype"); font-weight: 700; font-style: normal; }';
-    $pdfHtml .= '</style>';
     
-    $pdfHtml .= '<style>';
+    // إعدادات الصفحة والأبعاد
     $pdfHtml .= '@page { size: 842.25px 1190.25px; margin: 0; }';
+    $pdfHtml .= ':root { --footer-offset: 40px; }';
+    
     $pdfHtml .= '.group1-container1 { width: 842.25px; height: 1190.25px; position: relative; background-color: transparent; margin: 0; padding: 0; }';
     $pdfHtml .= '.group1-thq-group1-elm { width: 842.25px; height: 1190.25px; position: relative; background-color: white; margin: 0; padding: 0; }';
+    
+    // تنسيق الجدول (Info Table)
     $pdfHtml .= '.info-table { position: absolute; top: 242px; left: 36px; width: 770px; border-collapse: separate; border-spacing: 0; border: 1px solid #cccccc; border-radius: 8px; overflow: hidden; background-color: transparent; z-index: 10; }';
     $pdfHtml .= '.info-table td { border-bottom: 1px solid #cccccc; border-right: 1px solid #cccccc; height: 42px; text-align: center; vertical-align: middle; padding: 4px 8px; }';
     $pdfHtml .= '.info-table td:last-child { border-right: none; } .info-table tr:last-child td { border-bottom: none; }';
     
-    // تحديث الخطوط في الكلاسات لتطابق النسخة الثانية
     $pdfHtml .= '.info-table .en-title { width: 161px; color: rgba(54, 111, 181, 1); font-size: 13.5px; font-weight: 700; text-align: center; font-family: "Times New Roman", serif; }';
     $pdfHtml .= '.info-table .data-cell { width: 240px; color: rgba(44, 62, 119, 1); font-size: 13.5px; font-family: "Times New Roman", serif; font-weight: 400; text-align: center; }';
     $pdfHtml .= '.info-table .date-cell { font-size: 13.9px; } .info-table .data-cell.ar-text { font-family: "Noto Sans Arabic", sans-serif; }';
     $pdfHtml .= '.info-table .ar-title { width: 140px; color: rgba(54, 111, 181, 1); font-size: 13.5px; font-weight: 700; text-align: center; font-family: "Noto Sans Arabic", sans-serif; white-space: nowrap; }';
     
-    // إضافة خاصية تباعد الحروف الإنجليزية
     $pdfHtml .= '.en-spaced { letter-spacing: 0.3px; font-family: "Times New Roman", serif; }';
     
     $pdfHtml .= '.info-table tr.blue-row td { background-color: #2c3e77; color: #ffffff; }';
     $pdfHtml .= '.info-table .blue-row .data-cell { color: rgba(255, 255, 255, 1); }';
     $pdfHtml .= '.info-table tr.gray-row td { background-color: #f7f7f7; }';
-    $pdfHtml .= ':root { --footer-offset: 40px; }';
+
+    // توزيع العناصر (Placeholders & Text)
     $pdfHtml .= '.group1-thq-staticinfo-elm { top: 125px; left: 36.65px; width: 768.35px; height: 811.91px; display: flex; position: absolute; align-items: flex-start; pointer-events: none; }';
     $pdfHtml .= '.top-right-placeholder { position: absolute; top: 36px; left: 543.36px; width: 262.43px; height: 107.22px; display: flex; align-items: center; justify-content: center; z-index: 5; }';
     $pdfHtml .= '.top-left-placeholder { position: absolute; top: 36px; left: 36px; width: 149.96px; height: 65.98px; display: flex; align-items: center; justify-content: center; z-index: 5; }';
     $pdfHtml .= '.bottom-right-placeholder { position: absolute; top: 1005px; left: 657.17px; width: 149.96px; height: 71.23px; display: flex; align-items: center; justify-content: center; z-index: 5; }';
     $pdfHtml .= '.header-placeholder { top: -50px; left: 320px; width: 163px; height: 40px; position: absolute; display: flex; align-items: center; justify-content: center; }';
-    $pdfHtml .= '.group1-thq-text-elm41 { top: 40px; left: 289px; color: rgba(48, 109, 181, 1); width: 215px; position: absolute; font-size: 22.5px; font-weight: 700; text-align: center; line-height: 30px; }';
     
-    // تعديل خط Kingdom of Saudi Arabia
+    $pdfHtml .= '.group1-thq-text-elm41 { top: 40px; left: 289px; color: rgba(48, 109, 181, 1); width: 215px; position: absolute; font-size: 22.5px; font-weight: 700; text-align: center; line-height: 30px; }';
     $pdfHtml .= '.group1-thq-text-elm44 { top: -10px; left: 310px; color: rgba(0, 0, 0, 1); position: absolute; font-size: 17.3px; font-weight: 400; font-family: "Times New Roman", serif; }';
     
     $pdfHtml .= '.group1-thq-hospitallogoandthename-elm { top: 760px; left: 438.94px; width: 403px; height: 202.78px; display: flex; position: absolute; align-items: flex-start; }';
     $pdfHtml .= '.placeholder-logo-hospital { top: -12px; left: 133px; width: 136px; height: 136px; position: absolute; display: flex; align-items: center; justify-content: center; }';
     $pdfHtml .= '.group1-thq-text-elm18 { top: 113px; color: rgba(0, 0, 0, 1); width: 403px; height: auto; position: absolute; font-size: 12.8px; text-align: center; line-height: 22px; }';
+    
     $pdfHtml .= '.group1-thq-thedateofissueandalsotimeofissue-elm { top: calc(989.85px + var(--footer-offset)); left: 37.37px; width: 250px; height: 56px; display: flex; position: absolute; align-items: flex-start; }';
     $pdfHtml .= '.group1-thq-text-elm22 { color: rgba(0, 0, 0, 1); font-size: 12.5px; font-weight: 700; text-align: left; line-height: 28px; font-family: "Times New Roman", serif; position: absolute; white-space: nowrap; }';
+    
     $pdfHtml .= '.group1-thq-text-elm36 { top: calc(724.55px + var(--footer-offset)); left: 29.23px; color: rgba(0, 0, 0, 1); position: absolute; font-size: 12px; font-weight: 700; text-align: center; font-family: "Noto Sans Arabic", sans-serif; line-height: 23px; }';
     $pdfHtml .= '.group1-thq-text-elm39 { top: calc(770px + var(--footer-offset)); left: 55px; color: rgba(0, 0, 0, 1); position: absolute; font-size: 12px; font-weight: 700; font-family: "Times New Roman", serif; }';
     $pdfHtml .= '.group1-thq-text-elm40 { top: calc(791px + var(--footer-offset)); left: 108.35px; color: rgba(20, 0, 255, 1); position: absolute; font-size: 11px; font-weight: 700; text-decoration: underline; pointer-events: auto; font-family: "Times New Roman", serif; }';
+    
     $pdfHtml .= '.placeholder-136 { position: absolute; top: 620px; left: 122px; width: 136px; height: 136px; display: flex; align-items: center; justify-content: center; pointer-events: auto; }';
     $pdfHtml .= '.vertical-divider { position: absolute; top: 735px; left: 431px; width: 1px; height: 6.8cm; background-color: #dddddd; }';
     $pdfHtml .= '.thin-slash { font-weight: 300; font-family: "Inter", sans-serif; margin: 0 3px; display: inline-block; }';
     $pdfHtml .= '</style></head><body>';
 
-    // (بقية الكود الخاص بالـ HTML والـ Execution يظل كما هو)
+    // 4. بناء الـ HTML
     $pdfHtml .= '<div class="group1-container1"><div class="group1-thq-group1-elm">';
+    
+    // الشعارات العلوية والسفلية
     $pdfHtml .= '<div class="top-right-placeholder"><img src="' . $baseUrl . 'sehalogoright.png" style="width:100%;height:100%"/></div>';
     $pdfHtml .= '<div class="top-left-placeholder"><img src="' . $baseUrl . 'sehalogoleft.png" style="width:100%;height:100%"/></div>';
     $pdfHtml .= '<div class="bottom-right-placeholder"><img src="' . $baseUrl . 'bottomright.png" style="width:100%;height:100%"/></div>';
+    
     $pdfHtml .= '<div class="group1-thq-staticinfo-elm">';
     $pdfHtml .= '<div class="header-placeholder"><img src="' . $baseUrl . 'header.png" style="width:100%;height:100%"/></div>';
-    $pdfHtml .= '<span class="group1-thq-text-elm41"><span style="font-size:22.5px;font-family:\'Noto Sans Arabic\',sans-serif;font-weight:700;color:#306db5">تقرير إجازة مرضية</span><br/><span style="font-size:18.7px;font-family:\'Times New Roman\',serif;font-weight:700;color:#2c3e77">Sick Leave Report</span></span>';
+    $pdfHtml .= '<span class="group1-thq-text-elm41"><span style="font-family:\'Noto Sans Arabic\',sans-serif; font-weight:700;">تقرير إجازة مرضية</span><br/><span style="font-family:\'Times New Roman\',serif; font-weight:700; color:#2c3e77;">Sick Leave Report</span></span>';
     $pdfHtml .= '<span class="group1-thq-text-elm44">Kingdom of Saudi Arabia</span>';
     $pdfHtml .= '<div class="placeholder-136"><img src="' . $baseUrl . 'qr.svg" style="width:130px;height:130px"/></div>';
-    $pdfHtml .= '<span class="group1-thq-text-elm36" dir="rtl">للتحقق من بيانات التقرير يرجى التأكد من زيارة موقع منصة صحة<br/>الرسمي</span>';
+    
+    // التذييل الصغير داخل static info
+    $pdfHtml .= '<span class="group1-thq-text-elm36" dir="rtl">للتحقق من بيانات التقرير يرجى التأكد من زيارة موقع منصة صحة الرسمي</span>';
     $pdfHtml .= '<span class="group1-thq-text-elm39">To check the report please visit Seha\'s official website</span>';
-    $pdfHtml .= '<span class="group1-thq-text-elm40"><a href="https://seha-sa-iniquiries-slenquiry.up.railway.app/" target="_blank">www.seha.sa/#/inquiries/slenquiry</a></span>';
+    $pdfHtml .= '<span class="group1-thq-text-elm40"><a href="https://www.seha.sa/#/inquiries/slenquiry" target="_blank">www.seha.sa/#/inquiries/slenquiry</a></span>';
     $pdfHtml .= '</div>';
+
+    // جدول البيانات
     $pdfHtml .= '<table class="info-table" cellpadding="0" cellspacing="0"><tbody>';
     $pdfHtml .= '<tr><td class="en-title">Leave ID</td><td class="data-cell" colspan="2">' . $sc . '</td><td class="ar-title">رمز الإجازة</td></tr>';
     $pdfHtml .= '<tr class="blue-row"><td class="en-title" style="color:white">Leave Duration</td><td class="data-cell">' . $durationEn . '</td><td class="data-cell ar-text" dir="rtl">' . $durationAr . '</td><td class="ar-title" style="color:white">مدة الإجازة</td></tr>';
@@ -617,19 +631,26 @@ if ($pdfMode === 'download') {
     $pdfHtml .= '<tr class="gray-row"><td class="en-title">Physician Name</td><td class="data-cell en-spaced">' . $docNameEn . '</td><td class="data-cell ar-text">' . $docNameAr . '</td><td class="ar-title">اسم الطبيب المعالج</td></tr>';
     $pdfHtml .= '<tr><td class="en-title">Position</td><td class="data-cell en-spaced">' . $docTitleEn . '</td><td class="data-cell ar-text">' . $docTitleAr . '</td><td class="ar-title">المسمى الوظيفي</td></tr>';
     $pdfHtml .= '</tbody></table>';
+
+    // الفاصل العمودي وبيانات المستشفى
     $pdfHtml .= '<div class="vertical-divider"></div>';
     $pdfHtml .= '<div class="group1-thq-hospitallogoandthename-elm">';
     $pdfHtml .= '<div class="placeholder-logo-hospital">' . $hospLogoHtml . '</div>';
-    $pdfHtml .= '<span class="group1-thq-text-elm18"><span style="font-family:\'Noto Sans Arabic\',sans-serif;font-weight:700">' . $hospNameAr . '</span><br/><span style="font-family:\'Times New Roman\',serif;font-weight:700">' . $hospNameEn . '</span><br/>' . $licenseHtml . '</span>';
+    $pdfHtml .= '<span class="group1-thq-text-elm18"><span style="font-family:\'Noto Sans Arabic\',sans-serif; font-weight:700">' . $hospNameAr . '</span><br/><span style="font-family:\'Times New Roman\',serif; font-weight:700">' . $hospNameEn . '</span><br/>' . $licenseHtml . '</span>';
     $pdfHtml .= '</div>';
+
+    // تاريخ الإصدار في الأسفل
     $pdfHtml .= '<div class="group1-thq-thedateofissueandalsotimeofissue-elm"><span class="group1-thq-text-elm22"><span>' . $timestampLine . '</span><br/><span>' . $dateLine . '</span></span></div>';
+    
     $pdfHtml .= '</div></div></body></html>';
 
-    // حفظ الملف وتشغيل بايثون (نفس المنطق السابق)
+    // 5. حفظ ومعالجة الـ PDF (WeasyPrint)
     $tmpDir = '/tmp/weasyprint';
     if (!is_dir($tmpDir)) mkdir($tmpDir, 0755, true);
-    $htmlFile = $tmpDir . '/leave_' . $leaveId . '_' . time() . '.html';
-    $pdfFile  = $tmpDir . '/leave_' . $leaveId . '_' . time() . '.pdf';
+    
+    $htmlFile = $tmpDir . '/leave_' . $scFile . '_' . time() . '.html';
+    $pdfFile  = $tmpDir . '/leave_' . $scFile . '_' . time() . '.pdf';
+    
     file_put_contents($htmlFile, $pdfHtml);
 
     $scriptPath = __DIR__ . '/generate_pdf.py';
@@ -640,12 +661,15 @@ if ($pdfMode === 'download') {
         header('Content-Type: application/pdf');
         header('Content-Disposition: attachment; filename="SickLeave_' . $scFile . '.pdf"');
         header('Content-Length: ' . filesize($pdfFile));
+        header('Cache-Control: no-cache, no-store, must-revalidate');
         readfile($pdfFile);
         @unlink($htmlFile);
         @unlink($pdfFile);
+        exit;
     } else {
         echo '<h2>تعذّر إنشاء ملف PDF</h2>';
         echo '<pre>' . htmlspecialchars($output ?? '') . '</pre>';
+        @unlink($htmlFile);
     }
     exit;
 }
