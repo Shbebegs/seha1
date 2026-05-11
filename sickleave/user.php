@@ -1516,7 +1516,7 @@ function calcDays() {
   hidden.value  = diff;
   if (diff > MAX_DAYS) {
     warning.style.display = 'block';
-    warning.innerHTML = ` لطلب ايام اضافية تواصل معنا على رقمنا واتس⚠️ <b>تنبيه:</b المدة المطلوبة (${diff} أيام) تتجاوز الرصيد المتاح (${MAX_DAYS} يوم).`;
+    warning.innerHTML = ` ⚠️ <b>تنبيه: انك تطلب ايام اكثر من رصيدك المتاح لطلب ايام اضافية تواصل معنا على رقمنا واتس</b المدة المطلوبة (${diff} أيام) تتجاوز الرصيد المتاح (${MAX_DAYS} يوم).`;
   } else {
     warning.style.display = 'none';
   }
