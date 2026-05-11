@@ -180,60 +180,59 @@ if ($action === 'patient_login') {
         unset($_SESSION['patient_csrf_token']);
     } else {
 
-    $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? '';
+        $username = trim($_POST['username'] ?? '');
+        $password = $_POST['password'] ?? '';
 
-    // حماية من هجمات القوة الغاشمة
-    $maxAttempts = 5;
-    $lockMinutes = 15;
-    $_SESSION['patient_login_attempts'] = $_SESSION['patient_login_attempts'] ?? 0;
-    $_SESSION['patient_login_lock_until'] = $_SESSION['patient_login_lock_until'] ?? null;
+        // حماية من هجمات القوة الغاشمة
+        $maxAttempts = 5;
+        $lockMinutes = 15;
+        $_SESSION['patient_login_attempts'] = $_SESSION['patient_login_attempts'] ?? 0;
+        $_SESSION['patient_login_lock_until'] = $_SESSION['patient_login_lock_until'] ?? null;
 
-    if (!empty($_SESSION['patient_login_lock_until']) && time() < intval($_SESSION['patient_login_lock_until'])) {
-        $remain = ceil((intval($_SESSION['patient_login_lock_until']) - time()) / 60);
-        $loginError = "تم قفل تسجيل الدخول مؤقتاً. حاول بعد {$remain} دقيقة.";
-    } elseif (empty($username) || empty($password)) {
-        $loginError = 'يرجى إدخال اسم المستخدم وكلمة المرور.';
-    } else {
-        // جلب المستخدم مع التحقق من وجود حساب مريض مرتبط به فقط
-        $stmtCheck = $pdo->prepare("SELECT u.*, pa.patient_id, pa.allowed_days, pa.expiry_date FROM admin_users u INNER JOIN patient_accounts pa ON pa.user_id = u.id WHERE u.username = ? AND u.is_active = 1");
-        $stmtCheck->execute([$username]);
-        $userCheck = $stmtCheck->fetch();
-
-        if ($userCheck && password_verify($password, $userCheck['password_hash'])) {
-            // التحقق من أن الحساب مرتبط بمريض فعلاً (INNER JOIN يضمن ذلك لكن نتحقق مجدداً)
-            if (empty($userCheck['patient_id']) || (int)$userCheck['patient_id'] <= 0) {
-                // لا نكشف السبب الحقيقي لأسباب أمنية
-                $_SESSION['patient_login_attempts'] = intval($_SESSION['patient_login_attempts'] ?? 0) + 1;
-                $loginError = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
-            } elseif (!$userCheck['is_active']) {
-                $loginError = 'هذا الحساب معطّل. يرجى التواصل مع الإدارة.';
-            } elseif (!empty($userCheck['expiry_date']) && $userCheck['expiry_date'] < date('Y-m-d')) {
-                $loginError = 'انتهت صلاحية هذا الحساب. يرجى التواصل مع الإدارة.';
-            } else {
-                session_regenerate_id(true);
-                $_SESSION['patient_login_attempts'] = 0;
-                $_SESSION['patient_login_lock_until'] = null;
-                $_SESSION['patient_logged_in'] = true;
-                $_SESSION['patient_user_id'] = $userCheck['id'];
-                $_SESSION['patient_id'] = $userCheck['patient_id'];
-                $_SESSION['patient_display_name'] = $userCheck['display_name'];
-                $_SESSION['patient_username'] = $userCheck['username'];
-                $_SESSION['patient_allowed_days'] = (int)$userCheck['allowed_days'];
-                header('Location: user.php');
-                exit;
-            }
+        if (!empty($_SESSION['patient_login_lock_until']) && time() < intval($_SESSION['patient_login_lock_until'])) {
+            $remain = ceil((intval($_SESSION['patient_login_lock_until']) - time()) / 60);
+            $loginError = "تم قفل تسجيل الدخول مؤقتاً. حاول بعد {$remain} دقيقة.";
+        } elseif (empty($username) || empty($password)) {
+            $loginError = 'يرجى إدخال اسم المستخدم وكلمة المرور.';
         } else {
-            $_SESSION['patient_login_attempts'] = intval($_SESSION['patient_login_attempts'] ?? 0) + 1;
-            if ($_SESSION['patient_login_attempts'] >= $maxAttempts) {
-                $_SESSION['patient_login_lock_until'] = time() + ($lockMinutes * 60);
-                $_SESSION['patient_login_attempts'] = 0;
-                $loginError = 'تم تجاوز عدد المحاولات المسموح. تم القفل مؤقتاً 15 دقيقة.';
+            // جلب المستخدم مع التحقق من وجود حساب مريض مرتبط به فقط
+            $stmtCheck = $pdo->prepare("SELECT u.*, pa.patient_id, pa.allowed_days, pa.expiry_date FROM admin_users u INNER JOIN patient_accounts pa ON pa.user_id = u.id WHERE u.username = ? AND u.is_active = 1");
+            $stmtCheck->execute([$username]);
+            $userCheck = $stmtCheck->fetch();
+
+            if ($userCheck && password_verify($password, $userCheck['password_hash'])) {
+                // التحقق من أن الحساب مرتبط بمريض فعلاً
+                if (empty($userCheck['patient_id']) || (int)$userCheck['patient_id'] <= 0) {
+                    $_SESSION['patient_login_attempts'] = intval($_SESSION['patient_login_attempts'] ?? 0) + 1;
+                    $loginError = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
+                } elseif (!$userCheck['is_active']) {
+                    $loginError = 'هذا الحساب معطّل. يرجى التواصل مع الإدارة.';
+                } elseif (!empty($userCheck['expiry_date']) && $userCheck['expiry_date'] < date('Y-m-d')) {
+                    $loginError = 'انتهت صلاحية هذا الحساب. يرجى التواصل مع الإدارة.';
+                } else {
+                    session_regenerate_id(true);
+                    $_SESSION['patient_login_attempts'] = 0;
+                    $_SESSION['patient_login_lock_until'] = null;
+                    $_SESSION['patient_logged_in'] = true;
+                    $_SESSION['patient_user_id'] = $userCheck['id'];
+                    $_SESSION['patient_id'] = $userCheck['patient_id'];
+                    $_SESSION['patient_display_name'] = $userCheck['display_name'];
+                    $_SESSION['patient_username'] = $userCheck['username'];
+                    $_SESSION['patient_allowed_days'] = (int)$userCheck['allowed_days'];
+                    header('Location: user.php');
+                    exit;
+                }
             } else {
-                $loginError = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
+                $_SESSION['patient_login_attempts'] = intval($_SESSION['patient_login_attempts'] ?? 0) + 1;
+                if ($_SESSION['patient_login_attempts'] >= $maxAttempts) {
+                    $_SESSION['patient_login_lock_until'] = time() + ($lockMinutes * 60);
+                    $_SESSION['patient_login_attempts'] = 0;
+                    $loginError = 'تم تجاوز عدد المحاولات المسموح. تم القفل مؤقتاً 15 دقيقة.';
+                } else {
+                    $loginError = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
+                }
             }
         }
-    }
     } // نهاية التحقق من CSRF
 }
 
@@ -408,6 +407,7 @@ if ($action === 'create_sick_leave' && isPatientLoggedIn()) {
 
 // توليد PDF للإجازة (نفس قالب لوحة التحكم)
 if ($action === 'generate_pdf' && isPatientLoggedIn()) {
+    $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']) . '/';
     $leaveId = (int)($_GET['leave_id'] ?? 0);
     $userId  = (int)$_SESSION['patient_user_id'];
     $patientId = (int)$_SESSION['patient_id'];
@@ -515,14 +515,11 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
     $durationEn = $daysEn . ' ( ' . $startEn . ' to ' . $endEn . ' )';
     $durationAr = '<span style="font-family: \'Times New Roman\', serif; font-size: 14.5px; font-weight: 400;">' . $daysAr . '</span> <span style="font-family: \'Noto Sans Arabic\', sans-serif; font-size: 14.5px; font-weight: 400;">' . $daysArWord . '</span> ( ' . formatHijriDateSpanUser($startHj) . ' <span style="font-family: \'Noto Sans Arabic\', sans-serif; font-size: 13.5px; font-weight: 400;">إلى</span> ' . formatHijriDateSpanUser($endHj) . ' )';
 
-   if ($pdfMode === 'download') {
-        $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']) . '/';
+    if ($pdfMode === 'download') {
         $scFile = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sc);
 
         $pdfHtml  = '<!DOCTYPE html><html lang="ar"><head><meta charset="utf-8"/>';
         $pdfHtml .= '<title>Sick Leave Report</title>';
-        
-        // خطوط جوجل للمسافات والنصوص العربية فقط
         $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap" />';
         $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap" />';
         $pdfHtml .= '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap" />';
@@ -530,11 +527,10 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
         $pdfHtml .= '<style>html{line-height:1.15}body{margin:0}*{box-sizing:border-box;border-width:0;border-style:solid}p,li,ul,pre,div,h1,h2,h3,h4,h5,h6,figure,blockquote,figcaption{margin:0;padding:0}a{color:inherit;text-decoration:inherit}</style>';
         $pdfHtml .= '<style>html{font-family:Inter,sans-serif;font-size:16px}body{font-weight:400;color:#191818;background:#ffffff;margin:0;padding:0}</style>';
         
-        $pdfHtml .= '<style>';
-        
         // =========================================================
         // تضمين خطوط Times New Roman بصيغة (.otf) لنسخة الـ PDF
         // =========================================================
+        $pdfHtml .= '<style>';
         $pdfHtml .= '@font-face {';
         $pdfHtml .= '    font-family: "Times New Roman";';
         $pdfHtml .= '    src: url("' . $baseUrl . 'times_regular.otf") format("opentype");';
@@ -548,9 +544,10 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
         $pdfHtml .= '    font-weight: 700;';
         $pdfHtml .= '    font-style: normal;';
         $pdfHtml .= '}';
+        $pdfHtml .= '</style>';
         // =========================================================
 
-        $pdfHtml .= '@page{size:842.25px 1190.25px;margin:0}.group1-container1{width:842.25px;height:1190.25px;position:relative;background-color:transparent;margin:0;padding:0}.group1-thq-group1-elm{width:842.25px;height:1190.25px;position:relative;background-color:white;margin:0;padding:0}.info-table{position:absolute;top:242px;left:36px;width:770px;border-collapse:separate;border-spacing:0;border:1px solid #cccccc;border-radius:8px;overflow:hidden;background-color:transparent;z-index:10}.info-table td{border-bottom:1px solid #cccccc;border-right:1px solid #cccccc;height:42px;text-align:center;vertical-align:middle;padding:4px 8px}.info-table td:last-child{border-right:none}.info-table tr:last-child td{border-bottom:none}.info-table .en-title{width:161px;color:rgba(54,111,181,1);font-size:13.5px;font-weight:700;text-align:center;font-family:"Times New Roman",serif}.info-table .data-cell{width:240px;color:rgba(44,62,119,1);font-size:13.5px;font-family:"Times New Roman",serif;font-weight:400;text-align:center}.info-table .date-cell{font-size:13.9px}.info-table .data-cell.ar-text{font-family:"Noto Sans Arabic",sans-serif}.info-table .ar-title{width:140px;color:rgba(54,111,181,1);font-size:13.5px;font-weight:700;text-align:center;font-family:"Noto Sans Arabic",sans-serif;white-space:nowrap}.info-table tr.blue-row td{background-color:#2c3e77;color:#ffffff;border-bottom:1px solid #cccccc;border-right:1px solid #cccccc}.info-table tr.blue-row td:last-child{border-right:none}.info-table .blue-row .data-cell.ar-text{color:rgba(255,255,255,1);font-size:13.5px;font-family:"Times New Roman",serif;font-weight:400}.info-table .blue-row .data-cell{color:rgba(255,255,255,1)}.info-table tr.gray-row td{background-color:#f7f7f7}.en-spaced{letter-spacing:0.3px}:root{--footer-offset:40px}.group1-thq-staticinfo-elm{top:125px;left:36.65px;width:768.35px;height:811.91px;display:flex;position:absolute;align-items:flex-start}.top-right-placeholder{position:absolute;top:36px;left:592px;width:214px;height:107px;display:flex;align-items:center;justify-content:center}.top-left-placeholder{position:absolute;top:36px;left:36px;width:149.96px;height:65.98px;display:flex;align-items:center;justify-content:center}.bottom-right-placeholder{position:absolute;top:1005px;left:657.17px;width:149.96px;height:71.23px;display:flex;align-items:center;justify-content:center}.header-placeholder{top:-55px;left:320px;width:160px;height:50px;position:absolute;display:flex;align-items:center;justify-content:center}.group1-thq-text-elm41{top:40px;left:289px;color:rgba(48,109,181,1);width:215px;position:absolute;font-size:22.5px;font-weight:700;text-align:center;line-height:30px}.group1-thq-text-elm44{top:-10px;left:310px;color:rgba(0,0,0,1);position:absolute;font-size:17.3px;font-weight:400;text-align:left;font-family:"Times New Roman",serif}.group1-thq-hospitallogoandthename-elm{top:760px;left:438.94px;width:403px;height:202.78px;display:flex;position:absolute;align-items:flex-start}.placeholder-logo-hospital{top:-12px;left:133px;width:136px;height:136px;position:absolute;display:flex;align-items:center;justify-content:center}.group1-thq-text-elm18{top:120px;color:rgba(0,0,0,1);width:403px;height:auto;position:absolute;font-size:12.8px;text-align:center;line-height:22px}.group1-thq-thedateofissueandalsotimeofissue-elm{top:calc(989.85px + var(--footer-offset));left:37.37px;width:250px;height:56px;display:flex;position:absolute;align-items:flex-start}.group1-thq-text-elm22{color:rgba(0,0,0,1);font-size:12.5px;font-weight:700;text-align:left;line-height:28px;font-family:"Times New Roman",serif;position:absolute;white-space:nowrap}.group1-thq-text-elm36{top:calc(724.55px + var(--footer-offset));left:29.23px;color:rgba(0,0,0,1);position:absolute;font-size:12px;font-weight:700;text-align:center;font-family:"Noto Sans Arabic",sans-serif;line-height:23px}.group1-thq-text-elm39{top:calc(775.17px + var(--footer-offset));left:55px;color:rgba(0,0,0,1);position:absolute;font-size:12px;font-weight:700;text-align:left;font-family:"Times New Roman",serif}.group1-thq-text-elm40{top:calc(798.91px + var(--footer-offset));left:108.35px;color:rgba(20,0,255,1);position:absolute;font-size:11px;font-weight:700;text-align:left;text-decoration:underline;font-family:"Times New Roman",serif}.placeholder-136{position:absolute;top:620px;left:122px;width:136px;height:136px;display:flex;align-items:center;justify-content:center}.vertical-divider{position:absolute;top:735px;left:436px;width:1px;height:7cm;background-color:#dddddd}.thin-slash{font-weight:300;font-family:"Inter",sans-serif;margin:0 3px;display:inline-block}</style>';
+        $pdfHtml .= '<style>@page{size:842.25px 1190.25px;margin:0}.group1-container1{width:842.25px;height:1190.25px;position:relative;background-color:transparent;margin:0;padding:0}.group1-thq-group1-elm{width:842.25px;height:1190.25px;position:relative;background-color:white;margin:0;padding:0}.info-table{position:absolute;top:242px;left:36px;width:770px;border-collapse:separate;border-spacing:0;border:1px solid #cccccc;border-radius:8px;overflow:hidden;background-color:transparent;z-index:10}.info-table td{border-bottom:1px solid #cccccc;border-right:1px solid #cccccc;height:42px;text-align:center;vertical-align:middle;padding:4px 8px}.info-table td:last-child{border-right:none}.info-table tr:last-child td{border-bottom:none}.info-table .en-title{width:161px;color:rgba(54,111,181,1);font-size:13.5px;font-weight:700;text-align:center;font-family:"Times New Roman",serif}.info-table .data-cell{width:240px;color:rgba(44,62,119,1);font-size:13.5px;font-family:"Times New Roman",serif;font-weight:400;text-align:center}.info-table .date-cell{font-size:13.9px}.info-table .data-cell.ar-text{font-family:"Noto Sans Arabic",sans-serif}.info-table .ar-title{width:140px;color:rgba(54,111,181,1);font-size:13.5px;font-weight:700;text-align:center;font-family:"Noto Sans Arabic",sans-serif;white-space:nowrap}.info-table tr.blue-row td{background-color:#2c3e77;color:#ffffff;border-bottom:1px solid #cccccc;border-right:1px solid #cccccc}.info-table tr.blue-row td:last-child{border-right:none}.info-table .blue-row .data-cell.ar-text{color:rgba(255,255,255,1);font-size:13.5px;font-family:"Times New Roman",serif;font-weight:400}.info-table .blue-row .data-cell{color:rgba(255,255,255,1)}.info-table tr.gray-row td{background-color:#f7f7f7}.en-spaced{letter-spacing:0.3px}:root{--footer-offset:40px}.group1-thq-staticinfo-elm{top:125px;left:36.65px;width:768.35px;height:811.91px;display:flex;position:absolute;align-items:flex-start}.top-right-placeholder{position:absolute;top:36px;left:592px;width:214px;height:107px;display:flex;align-items:center;justify-content:center}.top-left-placeholder{position:absolute;top:36px;left:36px;width:149.96px;height:65.98px;display:flex;align-items:center;justify-content:center}.bottom-right-placeholder{position:absolute;top:1005px;left:657.17px;width:149.96px;height:71.23px;display:flex;align-items:center;justify-content:center}.header-placeholder{top:-55px;left:320px;width:160px;height:50px;position:absolute;display:flex;align-items:center;justify-content:center}.group1-thq-text-elm41{top:40px;left:289px;color:rgba(48,109,181,1);width:215px;position:absolute;font-size:22.5px;font-weight:700;text-align:center;line-height:30px}.group1-thq-text-elm44{top:-10px;left:310px;color:rgba(0,0,0,1);position:absolute;font-size:17.3px;font-weight:400;text-align:left;font-family:"Times New Roman",serif}.group1-thq-hospitallogoandthename-elm{top:760px;left:438.94px;width:403px;height:202.78px;display:flex;position:absolute;align-items:flex-start}.placeholder-logo-hospital{top:-12px;left:133px;width:136px;height:136px;position:absolute;display:flex;align-items:center;justify-content:center}.group1-thq-text-elm18{top:120px;color:rgba(0,0,0,1);width:403px;height:auto;position:absolute;font-size:12.8px;text-align:center;line-height:22px}.group1-thq-thedateofissueandalsotimeofissue-elm{top:calc(989.85px + var(--footer-offset));left:37.37px;width:250px;height:56px;display:flex;position:absolute;align-items:flex-start}.group1-thq-text-elm22{color:rgba(0,0,0,1);font-size:12.5px;font-weight:700;text-align:left;line-height:28px;font-family:"Times New Roman",serif;position:absolute;white-space:nowrap}.group1-thq-text-elm36{top:calc(724.55px + var(--footer-offset));left:29.23px;color:rgba(0,0,0,1);position:absolute;font-size:12px;font-weight:700;text-align:center;font-family:"Noto Sans Arabic",sans-serif;line-height:23px}.group1-thq-text-elm39{top:calc(775.17px + var(--footer-offset));left:55px;color:rgba(0,0,0,1);position:absolute;font-size:12px;font-weight:700;text-align:left;font-family:"Times New Roman",serif}.group1-thq-text-elm40{top:calc(798.91px + var(--footer-offset));left:108.35px;color:rgba(20,0,255,1);position:absolute;font-size:11px;font-weight:700;text-align:left;text-decoration:underline;font-family:"Times New Roman",serif}.placeholder-136{position:absolute;top:620px;left:122px;width:136px;height:136px;display:flex;align-items:center;justify-content:center}.vertical-divider{position:absolute;top:735px;left:436px;width:1px;height:7cm;background-color:#dddddd}.thin-slash{font-weight:300;font-family:"Inter",sans-serif;margin:0 3px;display:inline-block}</style>';
         $pdfHtml .= '</head><body>';
 
         $reportBodyPdf  = '<div class="group1-container1"><div class="group1-thq-group1-elm">';
@@ -602,6 +599,7 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
             if (is_file($p) && !is_link($p)) { $pythonBin = $p; break; }
             if (is_link($p)) { $real = realpath($p); if ($real && is_file($real)) { $pythonBin = $real; break; } }
         }
+        $scFile = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sc);
         $cmd = $pythonBin . ' "' . $scriptPath . '" "' . $tmpHtml . '" "' . $tmpPdf . '" 2>&1';
         $output = shell_exec($cmd);
 
@@ -618,11 +616,8 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
         @unlink($tmpHtml);
     }
 
-    // تجهيز الرابط الأساسي لاستخدامه في صفحة العرض (Preview) لضمان المسارات المطلقة
-    $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']) . '/';
-
     header('Content-Type: text/html; charset=utf-8');
-?>
+    ?>
 <!DOCTYPE html>
 <html lang="ar">
 <head>
@@ -662,8 +657,6 @@ a { color: inherit; text-decoration: inherit; }
 .info-table { position: absolute; top: 242px; left: 36px; width: 770px; border-collapse: separate; border-spacing: 0; border: 1px solid #cccccc; border-radius: 8px; overflow: hidden; z-index: 10; }
 .info-table td { border-bottom: 1px solid #cccccc; border-right: 1px solid #cccccc; height: 42px; text-align: center; vertical-align: middle; padding: 4px 8px; }
 .info-table td:last-child { border-right: none; } .info-table tr:last-child td { border-bottom: none; }
-
-/* توحيد استدعاء Times New Roman في الـ CSS */
 .info-table .en-title { width: 161px; color: rgba(54, 111, 181, 1); font-size: 13.5px; font-weight: 700; font-family: "Times New Roman", serif; }
 .info-table .data-cell { width: 240px; color: rgba(44, 62, 119, 1); font-size: 13.5px; font-family: "Times New Roman", serif; font-weight: 400; }
 .info-table .date-cell { font-size: 13.9px; } .info-table .data-cell.ar-text { font-family: "Noto Sans Arabic", sans-serif; }
@@ -692,18 +685,15 @@ a { color: inherit; text-decoration: inherit; }
 .placeholder-136 { position: absolute; top: 620px; left: 122px; width: 136px; height: 136px; display: flex; align-items: center; justify-content: center; pointer-events: auto; }
 .vertical-divider { position: absolute; top: 735px; left: 436px; width: 1px; height: 7cm; background-color: #dddddd; }
 .thin-slash { font-weight: 300; font-family: "Inter", sans-serif; margin: 0 3px; display: inline-block; }
-
 .controls { position: fixed; bottom: 30px; right: 30px; display: flex; gap: 15px; z-index: 1000; }
 .download-btn { background-color: #306db5; color: white; padding: 14px 28px; border-radius: 10px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0px 6px 15px rgba(0,0,0,0.3); font-family: "Inter", sans-serif; transition: all 0.3s; }
 .download-btn:hover { background-color: #2c3e77; transform: translateY(-3px); }
-
 @media screen and (max-width: 880px) {
   .group1-container1 { padding-top: 10px; padding-bottom: 10px; }
   .group1-thq-group1-elm { transform-origin: top center; transform: scale(calc(100vw / 860)); margin-bottom: calc(1190.25px * (100vw / 860) - 1190.25px); }
   .controls { bottom: 15px; right: 15px; left: 15px; justify-content: center; }
   .download-btn { width: 100%; text-align: center; font-size: 18px; padding: 16px; }
 }
-
 @media print {
   @page { size: 842.25px 1190.25px; margin: 0; }
   body { background: white !important; }
@@ -783,7 +773,7 @@ function downloadPDF() {
 </html>
 <?php
     exit;
-?>
+}
 
 // ======================== تحميل البيانات للصفحة الرئيسية ========================
 $patientData   = null;
@@ -1493,7 +1483,6 @@ function createLeave() {
       if (data.success) {
         showToast('✅ ' + data.message + ' (الرمز: ' + data.service_code + ')', 'success');
         
-        // التعديل المطلوب: تحديث الصفحة فقط وإظهار الإجازة بالجدول بدون فتح نافذة جديدة
         setTimeout(() => {
           location.reload();
         }, 1500);
