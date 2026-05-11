@@ -3495,7 +3495,7 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             echo json_encode(['success'=>true,'message'=>'تم تغيير كلمة المرور بنجاح.']);
             break;
 
-        case 'account_fetch_payments':
+   case 'account_fetch_payments':
             if ($_SESSION['admin_role'] !== 'admin') { echo json_encode(['success'=>false,'message'=>'ليس لديك صلاحية.']); exit; }
             $pdo->exec("CREATE TABLE IF NOT EXISTS account_payments (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -3506,7 +3506,10 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
                 created_by INT NULL,
                 FOREIGN KEY (user_id) REFERENCES admin_users(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-            $uid = intval($_GET['user_id'] ?? 0);
+            
+            // التعديل هنا: قراءة الـ user_id من POST
+            $uid = intval($_POST['user_id'] ?? $_GET['user_id'] ?? 0);
+            
             $stmt = $pdo->prepare("SELECT ap.*, au.display_name AS created_by_name FROM account_payments ap LEFT JOIN admin_users au ON ap.created_by = au.id WHERE ap.user_id = ? ORDER BY ap.paid_at DESC");
             $stmt->execute([$uid]);
             echo json_encode(['success'=>true,'payments'=>$stmt->fetchAll()]);
@@ -9955,13 +9958,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 acctLinkPatientModal.show();
             }
 
-            if (paymentsBtn) {
+           if (paymentsBtn) {
                 const uid = paymentsBtn.dataset.id;
                 document.getElementById('acctPaymentsUserName').textContent = paymentsBtn.dataset.name;
                 document.getElementById('acctPaymentsList').innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-success"></div></div>';
                 acctPaymentsModal.show();
-                const res = await fetch(`${REQUEST_URL}?action=account_fetch_payments&user_id=${uid}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                const data = await res.json();
+                
+                // التعديل هنا: استخدام الدالة الموحدة لإرسال الطلب كـ POST مع توكن الأمان (CSRF)
+                const data = await sendAjaxRequest('account_fetch_payments', { user_id: uid });
+                
                 if (data.success) {
                     const payments = data.payments || [];
                     const total = payments.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
