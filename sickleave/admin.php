@@ -9761,7 +9761,60 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Add new user
-        document.getElementById('acctAddUserBtn')?.addEventListener('click', () => acctNewUserModal.show());
+       document.getElementById('acctAddUserBtn')?.addEventListener('click', () => {
+            document.getElementById('acctNewUsername').value = '';
+            document.getElementById('acctNewPassword').value = '';
+            document.getElementById('acctNewPassword').type = 'password'; // إعادته مخفياً بالبداية
+            document.getElementById('acctNewDisplayName').value = '';
+            if (document.getElementById('acctNewLinkPatient')) document.getElementById('acctNewLinkPatient').value = '0';
+            if (document.getElementById('acctNewAllowedDays')) document.getElementById('acctNewAllowedDays').value = '0';
+            acctNewUserModal.show();
+        });
+        // دالة مساعدة لتوليد كلمة مرور عشوائية (بدون حروف معقدة أو متشابهة مثل l و 1 و O و 0)
+        function generateSimplePassword(length = 6) {
+            const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+            let pass = '';
+            for (let i = 0; i < length; i++) {
+                pass += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return pass;
+        }
+
+        // الاستماع لتغيير قائمة اختيار المريض في مودال إضافة حساب
+        document.getElementById('acctNewLinkPatient')?.addEventListener('change', function() {
+            const ptId = this.value;
+            if (ptId && ptId !== '0') {
+                // البحث عن بيانات المريض الكاملة من الكاش الموجود في الجافاسكربت
+                const pt = (currentTableData.patients || []).find(x => x.id == ptId);
+                if (pt) {
+                    // 1. تعبئة الاسم المعروض تلقائياً
+                    document.getElementById('acctNewDisplayName').value = pt.name_ar || pt.name || '';
+
+                    // 2. استخراج الاسم الأول الإنجليزي لاسم المستخدم
+                    let baseUser = '';
+                    if (pt.name_en) {
+                        // أخذ أول كلمة وتنظيفها من أي رموز وجعلها حروف صغيرة
+                        baseUser = pt.name_en.trim().split(/\s+/)[0].replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                    }
+                    // إذا لم يكن مسجلاً له اسم إنجليزي، نضع كلمة pt كبديل
+                    if (!baseUser) {
+                        baseUser = 'pt';
+                    }
+                    // إضافة آخر 3 أرقام من الهوية لضمان أن اليوزر فريد ولا يتكرر
+                    const idSuffix = (pt.identity_number || '').slice(-3);
+                    document.getElementById('acctNewUsername').value = baseUser + idSuffix;
+
+                    // 3. توليد الباسوورد وإظهاره مباشرة كـ Text
+                    const newPass = generateSimplePassword(6); // باسوورد من 6 خانات
+                    const passInput = document.getElementById('acctNewPassword');
+                    passInput.value = newPass;
+                    passInput.type = 'text'; // تحويل الحقل لنص ظاهر لتراه مباشرة
+                }
+            } else {
+                // إذا تم اختيار "بدون ربط"، نعيد إخفاء الباسوورد (اختياري)
+                document.getElementById('acctNewPassword').type = 'password';
+            }
+        });
         document.getElementById('acctNewUserSave')?.addEventListener('click', async () => {
             const username = document.getElementById('acctNewUsername').value.trim();
             const password = document.getElementById('acctNewPassword').value;
