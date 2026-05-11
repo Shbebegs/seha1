@@ -77,10 +77,8 @@ RUN mkdir -p /tmp/weasyprint && chmod 777 /tmp/weasyprint
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
 
-# Configure Apache - Enable AllowOverride for .htaccess and mod_headers
-RUN a2enmod headers 2>/dev/null || true && \
-    echo "ServerName localhost" >> /etc/apache2/apache2.conf && \
-    sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
+# Configure Apache
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 # PHP configuration
 RUN printf "upload_max_filesize = 20M\npost_max_size = 25M\nmemory_limit = 512M\nmax_execution_time = 120\n" > /usr/local/etc/php/conf.d/custom.ini
