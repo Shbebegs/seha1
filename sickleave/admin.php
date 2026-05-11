@@ -7345,15 +7345,17 @@ if (!in_array($uiDataViewMode, ['table','compact','cards','zebra','glass','minim
                         <input type="text" class="form-control" id="acctNewDisplayName" placeholder="مثال: أحمد محمد">
                     </div>
                     <div class="col-12"><hr class="my-1"><small class="text-muted fw-bold"><i class="bi bi-person-badge"></i> ربط بمريض (اختياري)</small></div>
-                    <div class="col-12">
-                        <label class="form-label">المريض المرتبط</label>
-                        <select class="form-select" id="acctNewLinkPatient">
-                            <option value="0">-- بدون ربط --</option>
-                            <?php foreach ($patients as $pt): ?>
-                            <option value="<?= $pt['id'] ?>"><?= htmlspecialchars($pt['name_ar'] ?: $pt['name']) ?> — <?= htmlspecialchars($pt['identity_number']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                  <div class="col-12">
+    <label class="form-label">المريض المرتبط</label>
+    <input type="text" class="form-control form-control-sm mb-2" id="acctNewLinkPatientSearch" placeholder="بحث سريع باسم المريض أو الهوية...">
+    
+    <select class="form-select" id="acctNewLinkPatient">
+        <option value="0">-- بدون ربط --</option>
+        <?php foreach ($patients as $pt): ?>
+        <option value="<?= $pt['id'] ?>"><?= htmlspecialchars($pt['name_ar'] ?: $pt['name']) ?> — <?= htmlspecialchars($pt['identity_number']) ?></option>
+        <?php endforeach; ?>
+    </select>
+</div>
                     <div class="col-12">
                         <label class="form-label">عدد أيام الإجازة المسموحة</label>
                         <input type="number" class="form-control" id="acctNewAllowedDays" min="0" max="365" value="0" placeholder="0">
@@ -8505,6 +8507,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setupSelectQuickSearch('dup_doctor_search', 'dup_doctor_select');
     setupSelectQuickSearch('doctor_id_edit_search', 'doctor_id_edit');
     setupSelectQuickSearch('hospital_id_search', 'hospital_id');
+    // أضف هذا السطر لربط حقل البحث الجديد بالقائمة
+setupSelectQuickSearch('acctNewLinkPatientSearch', 'acctNewLinkPatient');
 
     const quickPatientModalEl = document.getElementById('quickPatientModal');
     const quickDoctorModalEl = document.getElementById('quickDoctorModal');
