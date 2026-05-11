@@ -2267,16 +2267,15 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             ]);
             break;
 
-        case 'add_doctors_batch':
+       case 'add_doctors_batch':
             $batchText = trim($_POST['doctors_batch_text'] ?? '');
             $batchHospitalId = intval($_POST['batch_hospital_id'] ?? 0) ?: null;
             
-            // Parse new format: name_ar | name_en | title_ar | title_en (per line)
             $lines = array_filter(array_map('trim', explode("\n", $batchText)));
             if (empty($lines)) {
                 echo json_encode([
                     'success' => false,
-                    'message' => 'لم يتم التعرّف على أي طبيب. استخدم صيغة: اسم عربي | اسم إنجليزي | مسمى عربي | مسمى إنجليزي'
+                    'message' => 'لم يتم التعرّف على أي طبيب. يرجى كتابة البيانات بشكل صحيح.'
                 ]);
                 exit;
             }
@@ -2291,19 +2290,32 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
 
             foreach ($lines as $index => $line) {
                 $parts = array_map('trim', explode('|', $line));
-                $nameAr = $parts[0] ?? '';
-                $nameEn = $parts[1] ?? '';
-                $titleAr = $parts[2] ?? '';
-                $titleEn = $parts[3] ?? '';
+                $nameAr = ''; $nameEn = ''; $titleAr = ''; $titleEn = '';
+
+                // الفرز الذكي حسب عدد المعطيات المدخلة
+                if (count($parts) === 2) {
+                    $nameAr = $parts[0];
+                    $titleAr = $parts[1];
+                } elseif (count($parts) === 3) {
+                    $nameAr = $parts[0];
+                    $nameEn = $parts[1];
+                    $titleAr = $parts[2];
+                } elseif (count($parts) >= 4) {
+                    $nameAr = $parts[0];
+                    $nameEn = $parts[1];
+                    $titleAr = $parts[2];
+                    $titleEn = $parts[3];
+                } else {
+                    $nameAr = $parts[0] ?? '';
+                }
                 
                 if ($nameAr === '' || $titleAr === '') {
-                    $errors[] = "السطر " . ($index + 1) . " ناقص البيانات الأساسية.";
+                    $errors[] = "السطر " . ($index + 1) . " ناقص البيانات الأساسية (الاسم والمسمى).";
                     continue;
                 }
 
                 $checkStmt->execute([$nameAr, $nameAr, $titleAr, $titleAr]);
-                $existing = $checkStmt->fetch();
-                if ($existing) {
+                if ($checkStmt->fetch()) {
                     $duplicates++;
                     continue;
                 }
@@ -2316,9 +2328,6 @@ if (isset($_POST['action']) && $_POST['action'] !== 'login' && $_POST['action'] 
             $summaryMessage = "تمت معالجة الدفعة بنجاح: أضيف {$inserted}، مكرّر {$duplicates}.";
             if (!empty($errors)) {
                 $summaryMessage .= " أخطاء: " . implode(' | ', array_slice($errors, 0, 3));
-                if (count($errors) > 3) {
-                    $summaryMessage .= " ...";
-                }
             }
 
             echo json_encode([
@@ -6146,23 +6155,23 @@ if (!in_array($uiDataViewMode, ['table','compact','cards','zebra','glass','minim
                         </div>
                         <div class="col-md-2"><button type="submit" class="btn btn-gradient w-100"><i class="bi bi-plus"></i> إضافة طبيب</button></div>
                     </form>
-                    <div class="alert alert-light border mb-3">
+           <div class="alert alert-light border mb-3">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                             <strong><i class="bi bi-people-fill text-primary"></i> إضافة دفعة أطباء</strong>
                             <small class="text-muted">كل سطر = اسم عربي | اسم إنجليزي | مسمى عربي | مسمى إنجليزي</small>
                         </div>
-                     <div class="col-md-4">
-    <label class="form-label">المستشفى</label>
-    
-    <input type="text" class="form-control form-control-sm mb-2" id="batch_hospital_search" placeholder="بحث سريع باسم المستشفى...">
-    
-    <select class="form-select" name="batch_hospital_id" id="batch_hospital_id">
-        <option value="">اختر مستشفى</option>
-        <?php foreach ($hospitals_data as $h): ?>
-        <option value="<?php echo $h['id']; ?>"><?php echo htmlspecialchars($h['name_ar']); ?></option>
-        <?php endforeach; ?>
-    </select>
-</div>
+                        
+                        <form id="addDoctorsBatchForm" class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label">المستشفى</label>
+                                <input type="text" class="form-control form-control-sm mb-2" id="batch_hospital_search" placeholder="بحث سريع باسم المستشفى...">
+                                <select class="form-select" name="batch_hospital_id" id="batch_hospital_id">
+                                    <option value="">اختر مستشفى</option>
+                                    <?php foreach ($hospitals_data as $h): ?>
+                                    <option value="<?php echo $h['id']; ?>"><?php echo htmlspecialchars($h['name_ar']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
                             <div class="col-md-8">
                                 <label class="form-label">الأطباء (كل سطر طبيب واحد)</label>
                                 <textarea class="form-control" id="doctors_batch_text" name="doctors_batch_text" rows="4" placeholder="د. أحمد علي | Dr. Ahmed Ali | استشاري باطنية | Consultant Internal Medicine&#10;د. نورة خالد | Dr. Noura Khaled | أخصائي أطفال | Pediatric Specialist"></textarea>
