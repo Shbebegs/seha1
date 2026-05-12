@@ -524,7 +524,6 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
 
     // PDF download mode - use same template as admin
     if ($pdfMode === 'download') {
-        $scFile = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sc);
 
         $pdfHtml  = '<!DOCTYPE html><html lang="ar"><head><meta charset="utf-8"/>';
         $pdfHtml .= '<title>Sick Leave Report</title>';
@@ -618,7 +617,7 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
 
         if (file_exists($pdfFile) && filesize($pdfFile) > 0) {
             header('Content-Type: application/pdf');
-            header('Content-Disposition: attachment; filename="SickLeave_' . $scFile . '.pdf"');
+            header('Content-Disposition: attachment; filename="sickLeave.pdf"');
             header('Content-Length: ' . filesize($pdfFile));
             header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
             header('Pragma: no-cache');
