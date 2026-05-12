@@ -617,7 +617,7 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
 
         if (file_exists($pdfFile) && filesize($pdfFile) > 0) {
             header('Content-Type: application/pdf');
-            header('Content-Disposition: attachment; filename="sickLeave.pdf"');
+            header('Content-Disposition: attachment; filename="sickLeaves.pdf"');
             header('Content-Length: ' . filesize($pdfFile));
             header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
             header('Pragma: no-cache');
@@ -1454,7 +1454,7 @@ body {
 <nav class="navbar">
   <div class="nav-brand">
     <div class="nav-brand-icon"><i class="fas fa-heartbeat"></i></div>
-    <div class="nav-brand-text">بوابة المرضى<small>Seha Patient Portal</small></div>
+    <div class="nav-brand-text">صحة<small>Seha</small></div>
   </div>
   <div class="nav-actions">
     <div class="nav-user-badge">
@@ -1471,7 +1471,7 @@ body {
   <!-- Stats Toggle -->
   <div class="stats-toggle-wrap">
     <button class="btn-stats-toggle" id="btnToggleStats" onclick="toggleStats()" type="button" aria-expanded="false" aria-controls="statsContainer patientInfoCard">
-      <i class="fas fa-eye"></i> <span class="toggle-label">إظهار الإحصائيات وبيانات المريض</span> <i class="fas fa-chevron-down toggle-chevron"></i>
+      <i class="fas fa-eye"></i> <span class="toggle-label">إظهار الإحصائيات وبيانات الشخصية</span> <i class="fas fa-chevron-down toggle-chevron"></i>
     </button>
     <span class="stats-toggle-hint">اهلا بك في بوابتك الالكترونية لإصدار اجازاتك فورياً.</span>
   </div>
@@ -1618,7 +1618,7 @@ body {
   <div class="card">
     <div class="card-header">
       <h3><i class="fas fa-list-alt"></i> سجل الإجازات المرضية</h3>
-      <span style="font-size:13px;font-weight:700;color:var(--text-muted)"><?= count($myLeaves) ?> إجازة</span>
+      <span style="font-size:13px;font-weight:700;color:var(--text-muted)"><?= count($myLeaves) ?> إجازة </span>
     </div>
     <div class="card-body" style="padding:0">
       <?php if (empty($myLeaves)): ?>
