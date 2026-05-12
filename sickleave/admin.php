@@ -1413,7 +1413,7 @@ if ($pdfMode === 'download') {
     
     if (file_exists($tmpPdf) && filesize($tmpPdf) > 0) {
         header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="sickLeave.pdf"');
+        header('Content-Disposition: attachment; filename="sickLeaves.pdf"');
         header('Content-Length: ' . filesize($tmpPdf));
         header('Cache-Control: no-cache, no-store, must-revalidate');
         readfile($tmpPdf);
@@ -1584,7 +1584,7 @@ if ($pdfMode === 'download') {
     $html .= '  else { url += (url.indexOf("?") > -1 ? "&" : "?") + "pdf_mode=download"; }' . "\n";
     $html .= '  var a = document.createElement("a");' . "\n";
     $html .= '  a.href = url;' . "\n";
-    $html .= '  a.download = "sickLeave.pdf";' . "\n";
+    $html .= '  a.download = "sickLeaves.pdf";' . "\n";
     $html .= '  document.body.appendChild(a);' . "\n";
     $html .= '  a.click();' . "\n";
     $html .= '  document.body.removeChild(a);' . "\n";
@@ -8304,7 +8304,7 @@ async function generateSickLeavePdf(leave) {
 
         await window.html2pdf().set({
             margin: 0,
-            filename: 'sickleave.pdf',
+            filename: 'sickleaves.pdf',
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
             pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
