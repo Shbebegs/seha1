@@ -520,7 +520,7 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
     $dateLine      = $dayNameEn . ', ' . $dayNum . ' ' . $monthNameEn . ' ' . $yearNum;
 
     $durationEn = $daysEn . ' ( ' . $startEn . ' to ' . $endEn . ' )';
-    $durationAr = '<span style="font-family: \'Times New Roman\', serif; font-size: 14.5px; font-weight: 400;">' . $daysAr . '</span> <span style="font-family: \'Noto Sans Arabic\', sans-serif; font-size: 14.5px; font-weight: 400;">' . $daysArWord . '</span> ( ' . formatHijriDateSpanUser($startHj) . ' <span style="font-family: \'Noto Sans Arabic\', sans-serif; font-size: 13.5px; font-weight: 400;">إلى</span> ' . formatHijriDateSpanUser($endHj) . ' )';
+  $durationAr = '<span style="font-family: \'Times New Roman\', serif; font-size: 14.5px; font-weight: 400;">' . $daysAr . '</span> <span style="font-family: \'Noto Sans Arabic\', sans-serif; font-size: 14.5px; font-weight: 400;">' . $daysArWord . '</span> ( <span dir="ltr" style="unicode-bidi:isolate;direction:ltr;display:inline-block;font-family: \'Times New Roman\', serif; font-size: 14.5px; font-weight: 400;">' . htmlspecialchars($startHj, ENT_QUOTES, 'UTF-8') . '</span> <span style="font-family: \'Noto Sans Arabic\', sans-serif; font-size: 13.5px; font-weight: 400;">إلى</span> <span dir="ltr" style="unicode-bidi:isolate;direction:ltr;display:inline-block;font-family: \'Times New Roman\', serif; font-size: 14.5px; font-weight: 400;">' . htmlspecialchars($endHj, ENT_QUOTES, 'UTF-8') . '</span> )';
 
     // PDF download mode - use same template as admin
    if ($pdfMode === 'download') {
