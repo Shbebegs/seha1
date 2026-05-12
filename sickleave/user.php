@@ -497,7 +497,7 @@ if ($action === 'generate_pdf' && isPatientLoggedIn()) {
 
     $licenseHtml = '';
     if (!empty($hospLicense)) {
-        $licenseHtml = '<span dir="rtl" style="unicode-bidi:isolate;direction:rtl;display:inline-block;font-family: \'Noto Sans Arabic\', sans-serif; font-weight: 700;">رقم الترخيص :</span> <span dir="ltr" style="unicode-bidi:isolate;direction:ltr;display:inline-block;font-family: \'Times New Roman\', serif; font-weight: 700;">' . htmlspecialchars($hospLicense, ENT_QUOTES, 'UTF-8') . '</span>';
+        $licenseHtml = '<span dir="rtl" style="direction:rtl;unicode-bidi:isolate;display:inline-block;font-weight:700;white-space:nowrap;"><span style="font-family: \'Noto Sans Arabic\', sans-serif;">رقم الترخيص:</span> <bdi dir="ltr" style="font-family: \'Times New Roman\', serif; direction:ltr; unicode-bidi:isolate;">' . htmlspecialchars($hospLicense, ENT_QUOTES, 'UTF-8') . '</bdi></span>';
     }
 
     $issuePeriod = $lv['issue_period'] ?? 'AM';
