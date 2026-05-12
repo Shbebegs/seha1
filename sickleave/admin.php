@@ -1279,7 +1279,6 @@ function handleGeneratePdf($pdo, $leave_id, $pdfMode = 'preview') {
     $reportBody .= '</span></div>';
     $reportBody .= '</div>';
 
-    $scFile = preg_replace('/[^a-zA-Z0-9_-]/', '_', $sc);
 
     // ==================== DOWNLOAD MODE (WeasyPrint) ====================
 if ($pdfMode === 'download') {
@@ -1414,7 +1413,7 @@ if ($pdfMode === 'download') {
     
     if (file_exists($tmpPdf) && filesize($tmpPdf) > 0) {
         header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="SickLeave_' . $scFile . '.pdf"');
+        header('Content-Disposition: attachment; filename="sickLeave.pdf"');
         header('Content-Length: ' . filesize($tmpPdf));
         header('Cache-Control: no-cache, no-store, must-revalidate');
         readfile($tmpPdf);
@@ -1585,7 +1584,7 @@ if ($pdfMode === 'download') {
     $html .= '  else { url += (url.indexOf("?") > -1 ? "&" : "?") + "pdf_mode=download"; }' . "\n";
     $html .= '  var a = document.createElement("a");' . "\n";
     $html .= '  a.href = url;' . "\n";
-    $html .= '  a.download = "SickLeave_' . $scFile . '.pdf";' . "\n";
+    $html .= '  a.download = "sickLeave.pdf";' . "\n";
     $html .= '  document.body.appendChild(a);' . "\n";
     $html .= '  a.click();' . "\n";
     $html .= '  document.body.removeChild(a);' . "\n";
