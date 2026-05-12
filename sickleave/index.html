@@ -2060,7 +2060,7 @@ async function runLeaveInquiry() {
             service_code: code,
             identity_number: identityNumber
         });
-        const response = await fetch('search_service.php', {
+        const response = await fetch('/sickleave/search_service.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
