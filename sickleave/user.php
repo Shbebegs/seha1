@@ -768,7 +768,7 @@ if (isPatientLoggedIn()) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>بوابة المرضى - Seha Patient Portal</title>
+<title>صحة - Seha</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1410,8 +1410,8 @@ body {
   </div>
   <div class="login-card">
     <div class="login-logo"><i class="fas fa-hospital-user"></i></div>
-    <h2>بوابة المرضى</h2>
-    <p class="subtitle">Patient Portal - Seha Platform</p>
+    <h2>صحة</h2>
+    <p class="subtitle">Seha</p>
     <?php if (!empty($loginError)): ?>
       <div class="login-alert"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($loginError) ?></div>
     <?php endif; ?>
@@ -1473,7 +1473,7 @@ body {
     <button class="btn-stats-toggle" id="btnToggleStats" onclick="toggleStats()" type="button" aria-expanded="false" aria-controls="statsContainer patientInfoCard">
       <i class="fas fa-eye"></i> <span class="toggle-label">إظهار الإحصائيات وبيانات المريض</span> <i class="fas fa-chevron-down toggle-chevron"></i>
     </button>
-    <span class="stats-toggle-hint">الإحصائيات وبيانات المريض مخفية افتراضياً لحماية الخصوصية.</span>
+    <span class="stats-toggle-hint">اهلا بك في بوابتك الالكترونية لإصدار اجازاتك فورياً.</span>
   </div>
 
   <!-- Stats Grid -->
@@ -1512,7 +1512,7 @@ body {
             <span class="desc">لتعديل البيانات يرجى التواصل مع الإدارة</span>
           </div>
         </div>
-        <a href="https://wa.me/966500000000" target="_blank" class="btn-whatsapp"><i class="fab fa-whatsapp"></i> تواصل معنا</a>
+        <a href="https://wa.me/966573436223" target="_blank" class="btn-whatsapp"><i class="fab fa-whatsapp"></i> تواصل معنا</a>
       </div>
       <?php if ($patientData): ?>
       <div class="patient-info-grid">
@@ -1554,7 +1554,7 @@ body {
           <i class="fab fa-whatsapp" style="font-size:58px;color:#25d366;margin-bottom:16px"></i>
           <h3 style="margin-bottom:10px;color:var(--danger);font-weight:900">استنفدت كل رصيدك من الأيام</h3>
           <p style="color:var(--text-muted);font-weight:700;margin-bottom:22px">لإضافة رصيد أيام جديد أو طلب المساعدة، تواصل معنا مباشرة عبر الواتساب.</p>
-          <a href="https://wa.me/966500000000" target="_blank" class="btn-whatsapp" style="display:inline-flex;font-size:16px;padding:14px 26px"><i class="fab fa-whatsapp"></i> تواصل معنا على واتساب</a>
+          <a href="https://wa.me/966573436223" target="_blank" class="btn-whatsapp" style="display:inline-flex;font-size:16px;padding:14px 26px"><i class="fab fa-whatsapp"></i> تواصل معنا على واتساب</a>
         </div>
       <?php else: ?>
       <form id="leaveForm" onsubmit="return submitLeave(event)">
